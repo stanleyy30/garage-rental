@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AuthController; // Registration, login, logout
 use App\Http\Controllers\DashboardController; // Home pages
+use App\Http\Controllers\VerificationController; // Verify New Registrant
 use Illuminate\Support\Facades\Route; // Laravel's route helper
 
 Route::redirect('/', '/dashboard'); // Opening the site goes to the dashboard (guests are sent on to /login)
@@ -19,6 +20,8 @@ Route::middleware('auth')->group(function () { // Pages for logged-in users only
 
     Route::middleware('role:admin')->prefix('admin')->name('admin.')->group(function () { // Admin pages: /admin/..., names admin.*
         Route::get('/', [DashboardController::class, 'admin'])->name('dashboard'); // Admin home page
+        Route::get('/verifications', [VerificationController::class, 'index'])->name('verifications.index'); // Tenants to verify
+        Route::patch('/verifications/{tenant}', [VerificationController::class, 'update'])->name('verifications.update'); // Accept or reject one tenant
     }); // End of the admin group
 
     Route::middleware('role:tenant')->prefix('tenant')->name('tenant.')->group(function () { // Tenant pages: /tenant/..., names tenant.*
