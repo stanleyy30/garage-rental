@@ -12,7 +12,9 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        $middleware->alias([ // Give our middleware short names to use in routes
+            'role' => \App\Http\Middleware\EnsureRole::class, // 'role:admin' / 'role:tenant' runs EnsureRole
+        ]); // End of the alias list
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(
