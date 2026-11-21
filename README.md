@@ -1,46 +1,54 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Garage Rental
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+A web app for renting garages for bicycles, cars and electric cars. Tenants register, wait until the admin accepts them, then rent a garage and upload a payment proof. The admin creates garages, verifies new tenants, extends rentals and reads income reports.
 
-## About Laravel
+Built with Laravel 13, PHP 8.4, MySQL, Blade and Bootstrap 5.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## Run it locally
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+You need PHP 8.3 or newer, Composer and MySQL.
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+1. Create an empty MySQL database named `garage_rental`.
+2. Install the packages and create your settings file:
 
-## Learning Laravel
+```bash
+composer install
+cp .env.example .env
+php artisan key:generate
+```
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+3. Check the database lines in `.env`. They expect the user `root` with no password on 127.0.0.1.
+4. Create the tables and the admin account, then start the server:
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+```bash
+php artisan migrate:fresh --seed
+php artisan serve
+```
 
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
+5. Open http://127.0.0.1:8000 and log in as the admin with `admin@garage.test` and `admin12345`. Tenants sign up with the link on the login page.
 
-## Contributing
+## Business rules
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+| Rule | How it works |
+|---|---|
+| Garage IDs | S for bicycle, C for car and E for electric car garages, numbered from 001. All types together are capped at 999 garages. |
+| Which garage fits | Bicycles and motorcycles use S garages, petrol cars use C garages, electric cars use C or E garages. |
+| Daily rental | Starts today and lasts 1 day up to the number of days in this month minus one. Costs the daily price times the days. |
+| Monthly rental | Lasts as many days as the start month has (15 Feb 2026 to 15 Mar 2026). Costs 25 times the daily price. |
+| Battery charging | Only for an electric car in an E garage. The tenant enters the battery size, the remaining battery (0 to 99%) and the kWh until full. Charging is billed once: kWh until full times the garage's price per kWh. |
+| Extension by the tenant | In the app, with the same limits as a new rental, counted from the current end date: daily up to that month's days minus one, or one month. |
+| Extension by the admin | For any other length the tenant asks the admin for a number of days. Whole months from the current end date cost the monthly price and the remaining days cost the daily price. From 30 Nov, 31 days is one month plus one day. |
+| Payment proof | A jpg or png image of at most 1 MB, for every rental and extension. |
+| Garage status | A garage is used while a rental covers today and becomes available again after the end date. |
 
-## Code of Conduct
+## Where the code lives
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+The app follows MVC. Models in `app/Models` only describe the tables, their casts and relationships. Controllers in `app/Http/Controllers` run every query, calculation and save. The formulas sit in `Concerns/CalculatesRentals.php` and the shared extension steps in `Concerns/HandlesExtensions.php`, so the tenant and admin pages use the same code. Form requests in `app/Http/Requests` hold the validation rules. Views in `resources/views` only display the values the controllers pass to them.
 
-## Security Vulnerabilities
+## Tests
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+```bash
+php artisan test
+```
 
-## License
-
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+66 tests run against an in-memory SQLite database, so they never touch your MySQL data. Unit tests check every formula; feature tests check each page and rule from registration to reports.
