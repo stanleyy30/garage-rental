@@ -5,6 +5,7 @@ use App\Http\Controllers\AuthController; // Registration, login, logout
 use App\Http\Controllers\DashboardController; // Home pages
 use App\Http\Controllers\GarageController; // Create Garages
 use App\Http\Controllers\RentalController; // Rent New Garage and My Rentals
+use App\Http\Controllers\ReportController; // Rental reports
 use App\Http\Controllers\TenantExtensionController; // Extend Own Rental (tenant)
 use App\Http\Controllers\VerificationController; // Verify New Registrant
 use Illuminate\Support\Facades\Route; // Laravel's route helper
@@ -32,6 +33,7 @@ Route::middleware('auth')->group(function () { // Pages for logged-in users only
         Route::get('/extensions/{rental}/create', [AdminExtensionController::class, 'create'])->name('extensions.create'); // Days form
         Route::post('/extensions/{rental}/preview', [AdminExtensionController::class, 'preview'])->name('extensions.preview'); // Split and cost
         Route::post('/extensions/{rental}', [AdminExtensionController::class, 'store'])->name('extensions.store'); // Upload proof and save
+        Route::get('/reports', [ReportController::class, 'index'])->name('reports.index'); // The four reports
     }); // End of the admin group
 
     Route::middleware('role:tenant')->prefix('tenant')->name('tenant.')->group(function () { // Tenant pages: /tenant/..., names tenant.*
