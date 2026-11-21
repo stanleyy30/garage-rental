@@ -2,7 +2,6 @@
 
 namespace App\Models; // This file lives in app/Models
 
-use App\Enums\GarageType; // The GarageType enum
 use App\Enums\VehicleType; // The VehicleType enum
 use Illuminate\Database\Eloquent\Attributes\Fillable; // Attribute that lists the columns we may fill at once
 use Illuminate\Database\Eloquent\Attributes\Table; // Attribute that sets the primary key
@@ -31,23 +30,4 @@ class Vehicle extends Model // One row of the "vehicles" table
     { // Start of rentals()
         return $this->hasMany(Rental::class, 'vehicle_id', 'vehicle_id'); // rentals.vehicle_id -> vehicles.vehicle_id
     } // End of rentals()
-
-    public function needsPlate(): bool // Every vehicle needs a plate number except a bicycle
-    { // Start of needsPlate()
-        return $this->type !== VehicleType::Bicycle; // False only for bicycles
-    } // End of needsPlate()
-
-    public function isElectricCar(): bool // True for electric cars
-    { // Start of isElectricCar()
-        return $this->type === VehicleType::ElectricCar; // Compare with the ElectricCar case
-    } // End of isElectricCar()
-
-    public function getCompatibleGarageTypes(): array // Which garage types this vehicle may use
-    { // Start of getCompatibleGarageTypes()
-        return match ($this->type) { // Choose by vehicle type
-            VehicleType::Bicycle, VehicleType::Motorcycle => [GarageType::Bicycle], // Bicycle and motorcycle -> S garages
-            VehicleType::Car => [GarageType::Car], // Petrol car -> C garages only
-            VehicleType::ElectricCar => [GarageType::Car, GarageType::ElectricCar], // Electric car -> C or E garages
-        }; // End of match
-    } // End of getCompatibleGarageTypes()
 } // End of the class

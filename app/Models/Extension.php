@@ -25,19 +25,4 @@ class Extension extends Model // One row of the "extensions" table
     { // Start of rental()
         return $this->belongsTo(Rental::class, 'rental_id', 'rental_id'); // extensions.rental_id -> rentals.rental_id
     } // End of rental()
-
-    public function validateNewEndDate(): bool // The new end date must be after the old one
-    { // Start of validateNewEndDate()
-        return $this->new_end_date->greaterThan($this->old_end_date); // True only if new > old
-    } // End of validateNewEndDate()
-
-    public function calculateExtraDays(): int // Number of days added
-    { // Start of calculateExtraDays()
-        return (int) $this->old_end_date->diffInDays($this->new_end_date); // Days between old and new end date
-    } // End of calculateExtraDays()
-
-    public function calculateRemainingCost(): float // Amount still to pay for the extension
-    { // Start of calculateRemainingCost()
-        return max(0, $this->calculateExtraDays() * $this->rental->garage->daily_price); // Extra days x daily price, never below 0
-    } // End of calculateRemainingCost()
 } // End of the class

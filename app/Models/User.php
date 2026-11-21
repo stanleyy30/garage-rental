@@ -7,6 +7,7 @@ use App\Enums\VerificationStatus; // The VerificationStatus enum (Pending / Acce
 use Illuminate\Database\Eloquent\Attributes\Fillable; // Attribute that lists the columns we may fill at once
 use Illuminate\Database\Eloquent\Attributes\Hidden; // Attribute that hides columns when the model is turned into an array/JSON
 use Illuminate\Database\Eloquent\Attributes\Table; // Attribute that sets the table name and primary key
+use Illuminate\Database\Eloquent\Builder; // Query builder type, used in the role scope
 use Illuminate\Foundation\Auth\User as Authenticatable; // Laravel's base class for users who can log in
 
 #[Table(name: 'users', key: 'user_id')] // Table "users", primary key "user_id" (not Laravel's default "id")
@@ -24,13 +25,15 @@ class User extends Authenticatable // Parent of Tenant and Admin; Laravel login 
         ]; // End of the list
     } // End of casts()
 
-    public function getName(): string // Getter from the class diagram: returns the full name
-    { // Start of getName()
-        return $this->name; // The "name" column
-    } // End of getName()
+    protected static function restrictToRole(Role $role, VerificationStatus $startStatus): void // Model setup shared by Tenant and Admin
+    { // Start of restrictToRole()
+        static::addGlobalScope('role', function (Builder $query) use ($role) { // Every query of the child class gets an extra condition
+            $query->where('role', $role->value); // ... only rows with this role
+        }); // End of the global scope
 
-    public function getRole(): Role // Getter from the class diagram: returns the role
-    { // Start of getRole()
-        return $this->role; // The "role" column as a Role enum
-    } // End of getRole()
+        static::creating(function (User $user) use ($role, $startStatus) { // Runs just before a new row is inserted
+            $user->role = $role; // Always save this role
+            $user->verification_status = $startStatus; // Starting status (Pending for tenants, Accepted for the admin)
+        }); // End of the creating hook
+    } // End of restrictToRole()
 } // End of the class

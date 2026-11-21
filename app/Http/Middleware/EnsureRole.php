@@ -10,7 +10,7 @@ class EnsureRole // Middleware: a check that runs before a page is opened
 { // Start of the class
     public function handle(Request $request, Closure $next, string $role): Response // $role comes from the route, e.g. 'role:admin'
     { // Start of handle()
-        if ($request->user()->getRole()->value !== $role) { // The logged-in user's role is not the one this page needs ...
+        if ($request->user()->role->value !== $role) { // The logged-in user's role is not the one this page needs ...
             abort(403, 'You are not allowed to open this page.'); // ... so stop with "403 Forbidden"
         } // End of the role check
 
