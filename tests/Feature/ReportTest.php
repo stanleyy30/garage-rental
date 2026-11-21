@@ -45,7 +45,7 @@ class ReportTest extends TestCase // Tests for the four rental reports
     { // Start of vehicleOf()
         $tenant = Tenant::create(['nik' => $nik, 'name' => $name, 'phone_number' => '081234567890', 'email' => $email, 'password' => 'secret123']); // Tenant
 
-        return Vehicle::create(['user_id' => $tenant->user_id, 'type' => 'car', 'plate_number' => 'L ' . $nik, 'brand_model' => 'Test']); // Vehicle
+        return Vehicle::create(['user_id' => $tenant->user_id, 'type' => 'car', 'plate_number' => 'L ' . substr($nik, -4) . ' AB', 'brand_model' => 'Test']); // Vehicle, plate within the 12-character column
     } // End of vehicleOf()
 
     private function rental(Vehicle $vehicle, string $garageId, string $start, float $total): Rental // A rental that started on $start
