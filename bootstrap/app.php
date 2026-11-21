@@ -14,6 +14,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([ // Give our middleware short names to use in routes
             'role' => \App\Http\Middleware\EnsureRole::class, // 'role:admin' / 'role:tenant' runs EnsureRole
+            'verified_tenant' => \App\Http\Middleware\EnsureTenantIsVerified::class, // Only accepted tenants may rent or extend
         ]); // End of the alias list
     })
     ->withExceptions(function (Exceptions $exceptions): void {

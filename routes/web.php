@@ -3,6 +3,7 @@
 use App\Http\Controllers\AuthController; // Registration, login, logout
 use App\Http\Controllers\DashboardController; // Home pages
 use App\Http\Controllers\GarageController; // Create Garages
+use App\Http\Controllers\RentalController; // Rent New Garage and My Rentals
 use App\Http\Controllers\VerificationController; // Verify New Registrant
 use Illuminate\Support\Facades\Route; // Laravel's route helper
 
@@ -29,5 +30,12 @@ Route::middleware('auth')->group(function () { // Pages for logged-in users only
 
     Route::middleware('role:tenant')->prefix('tenant')->name('tenant.')->group(function () { // Tenant pages: /tenant/..., names tenant.*
         Route::get('/', [DashboardController::class, 'tenant'])->name('dashboard'); // Tenant home page
+
+        Route::middleware('verified_tenant')->group(function () { // Only tenants accepted by the admin
+            Route::get('/rentals', [RentalController::class, 'index'])->name('rentals.index'); // My Rentals
+            Route::get('/rentals/create', [RentalController::class, 'create'])->name('rentals.create'); // Rent form (step 1 and 2)
+            Route::post('/rentals/preview', [RentalController::class, 'preview'])->name('rentals.preview'); // Check and show the total
+            Route::post('/rentals', [RentalController::class, 'store'])->name('rentals.store'); // Confirm, upload proof and save
+        }); // End of the verified group
     }); // End of the tenant group
 }); // End of the auth group
