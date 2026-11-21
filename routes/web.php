@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AuthController; // Registration, login, logout
 use App\Http\Controllers\DashboardController; // Home pages
+use App\Http\Controllers\GarageController; // Create Garages
 use App\Http\Controllers\VerificationController; // Verify New Registrant
 use Illuminate\Support\Facades\Route; // Laravel's route helper
 
@@ -22,6 +23,8 @@ Route::middleware('auth')->group(function () { // Pages for logged-in users only
         Route::get('/', [DashboardController::class, 'admin'])->name('dashboard'); // Admin home page
         Route::get('/verifications', [VerificationController::class, 'index'])->name('verifications.index'); // Tenants to verify
         Route::patch('/verifications/{tenant}', [VerificationController::class, 'update'])->name('verifications.update'); // Accept or reject one tenant
+        Route::get('/garages', [GarageController::class, 'index'])->name('garages.index'); // Garage list and form
+        Route::post('/garages', [GarageController::class, 'store'])->name('garages.store'); // Create a batch of garages
     }); // End of the admin group
 
     Route::middleware('role:tenant')->prefix('tenant')->name('tenant.')->group(function () { // Tenant pages: /tenant/..., names tenant.*
