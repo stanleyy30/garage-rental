@@ -26,7 +26,7 @@ class AdminExtensionController extends Controller // Extend Garage Rental: the a
                 'id' => $rental->rental_id, // For the Extend button
                 'garage' => $rental->garage_id . ' (' . $rental->garage->type->label() . ')', // Garage
                 'tenant' => $rental->vehicle->tenant->name, // Tenant name
-                'vehicle' => trim($rental->vehicle->brand_model . ' ' . $rental->vehicle->plate_number), // Vehicle
+                'vehicle' => $this->vehicleLabel($rental->vehicle->brand_model, $rental->vehicle->plate_number), // Vehicle
                 'endDate' => $this->date($rental->end_date), // Current end date
             ]), // End of the rows
         ]); // End of page()

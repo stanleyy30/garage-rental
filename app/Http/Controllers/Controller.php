@@ -23,6 +23,11 @@ abstract class Controller // Parent of every controller
         return 'Rp ' . number_format($amount, 0, ',', '.'); // Indonesian style: dot for thousands
     } // End of rupiah()
 
+    protected function vehicleLabel(string $brandModel, ?string $plateNumber): string // Vehicle for the screen: "Toyota Avanza (L 1234 AB)"
+    { // Start of vehicleLabel()
+        return $plateNumber ? "{$brandModel} ({$plateNumber})" : $brandModel; // Plate in brackets; bicycles have none
+    } // End of vehicleLabel()
+
     protected function date(?\DateTimeInterface $date): string // Format a date for the screen: "21 Nov 2026"
     { // Start of date()
         return $date ? $date->format('d M Y') : '-'; // A dash when there is no date

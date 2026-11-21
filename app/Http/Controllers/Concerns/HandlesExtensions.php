@@ -34,7 +34,7 @@ trait HandlesExtensions // Steps shared by the tenant's and the admin's extensio
 
         return [ // Rows in display order
             ['label' => 'Garage', 'value' => $rental->garage_id . ' (' . $rental->garage->type->label() . ')'], // Garage
-            ['label' => 'Vehicle', 'value' => trim($rental->vehicle->brand_model . ' ' . $rental->vehicle->plate_number)], // Vehicle
+            ['label' => 'Vehicle', 'value' => $this->vehicleLabel($rental->vehicle->brand_model, $rental->vehicle->plate_number)], // Vehicle
             ['label' => 'Current end date', 'value' => $this->date($extension['oldEndDate'])], // Before
             ['label' => 'Extra days', 'value' => $extension['days'] . ' days'], // How many days
             ['label' => 'New end date', 'value' => $this->date($extension['newEndDate'])], // After

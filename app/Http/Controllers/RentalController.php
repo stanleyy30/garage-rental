@@ -183,7 +183,7 @@ class RentalController extends Controller // Rent New Garage and My Rentals (ten
     private function summaryRows(array $rental): array // Label/value rows for the preview page
     { // Start of summaryRows()
         $rows = [ // Rows shown for every rental
-            ['label' => 'Vehicle', 'value' => trim($rental['vehicleType']->label() . ' ' . $rental['brandModel'] . ' ' . $rental['plateNumber'])], // e.g. Car Toyota Avanza L 1234 AB
+            ['label' => 'Vehicle', 'value' => $this->vehicleLabel($rental['brandModel'], $rental['plateNumber']) . ', ' . $rental['vehicleType']->label()], // e.g. Toyota Avanza (L 1234 AB), Car
             ['label' => 'Garage', 'value' => $rental['garage']->garage_id . ' (' . $rental['garage']->type->label() . ')'], // e.g. C001 (Car Garage)
             ['label' => 'Rental type', 'value' => $rental['rentalType']->label() . ', ' . $rental['days'] . ' days'], // e.g. Daily, 5 days
             ['label' => 'Start date', 'value' => $this->date($rental['startDate'])], // Today
@@ -208,7 +208,7 @@ class RentalController extends Controller // Rent New Garage and My Rentals (ten
         return [ // Ready-made values
             'id' => $rental->rental_id, // For the Extend button
             'garage' => $rental->garage_id . ' (' . $rental->garage->type->label() . ')', // Garage
-            'vehicle' => trim($rental->vehicle->brand_model . ' ' . $rental->vehicle->plate_number), // Vehicle
+            'vehicle' => $this->vehicleLabel($rental->vehicle->brand_model, $rental->vehicle->plate_number), // Vehicle
             'type' => $rental->rental_type->label(), // Daily / Monthly
             'period' => $this->date($rental->start_date) . ' - ' . $this->date($rental->end_date), // Start - end
             'total' => $this->rupiah($rental->total_cost), // Amount paid

@@ -23,7 +23,7 @@
 
 @if ($vehicleType) {{-- Step 2 appears after a vehicle type was chosen --}}
 <div class="card shadow-sm"> {{-- Step 2 box --}}
-    <div class="card-header fw-bold">2. Rental details for a {{ $vehicleTypeLabel }}</div> {{-- Box title --}}
+    <div class="card-header fw-bold">2. Rental details: {{ $vehicleTypeLabel }}</div> {{-- Box title with the chosen vehicle type --}}
     <div class="card-body"> {{-- Padding --}}
         @if (count($garageOptions) === 0) {{-- The controller found no free garage for this vehicle --}}
             <div class="alert alert-warning mb-0">No garage is available for this vehicle today.</div> {{-- Nothing to rent --}}
