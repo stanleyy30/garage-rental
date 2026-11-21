@@ -1,9 +1,11 @@
 <?php // Start of a PHP file
 
+use App\Http\Controllers\AdminExtensionController; // Extend Garage Rental (admin)
 use App\Http\Controllers\AuthController; // Registration, login, logout
 use App\Http\Controllers\DashboardController; // Home pages
 use App\Http\Controllers\GarageController; // Create Garages
 use App\Http\Controllers\RentalController; // Rent New Garage and My Rentals
+use App\Http\Controllers\TenantExtensionController; // Extend Own Rental (tenant)
 use App\Http\Controllers\VerificationController; // Verify New Registrant
 use Illuminate\Support\Facades\Route; // Laravel's route helper
 
@@ -26,6 +28,10 @@ Route::middleware('auth')->group(function () { // Pages for logged-in users only
         Route::patch('/verifications/{tenant}', [VerificationController::class, 'update'])->name('verifications.update'); // Accept or reject one tenant
         Route::get('/garages', [GarageController::class, 'index'])->name('garages.index'); // Garage list and form
         Route::post('/garages', [GarageController::class, 'store'])->name('garages.store'); // Create a batch of garages
+        Route::get('/extensions', [AdminExtensionController::class, 'index'])->name('extensions.index'); // Garages rented today
+        Route::get('/extensions/{rental}/create', [AdminExtensionController::class, 'create'])->name('extensions.create'); // Days form
+        Route::post('/extensions/{rental}/preview', [AdminExtensionController::class, 'preview'])->name('extensions.preview'); // Split and cost
+        Route::post('/extensions/{rental}', [AdminExtensionController::class, 'store'])->name('extensions.store'); // Upload proof and save
     }); // End of the admin group
 
     Route::middleware('role:tenant')->prefix('tenant')->name('tenant.')->group(function () { // Tenant pages: /tenant/..., names tenant.*
@@ -36,6 +42,9 @@ Route::middleware('auth')->group(function () { // Pages for logged-in users only
             Route::get('/rentals/create', [RentalController::class, 'create'])->name('rentals.create'); // Rent form (step 1 and 2)
             Route::post('/rentals/preview', [RentalController::class, 'preview'])->name('rentals.preview'); // Check and show the total
             Route::post('/rentals', [RentalController::class, 'store'])->name('rentals.store'); // Confirm, upload proof and save
+            Route::get('/rentals/{rental}/extend', [TenantExtensionController::class, 'create'])->name('extensions.create'); // Extension form
+            Route::post('/rentals/{rental}/extend/preview', [TenantExtensionController::class, 'preview'])->name('extensions.preview'); // Check limits, show cost
+            Route::post('/rentals/{rental}/extend', [TenantExtensionController::class, 'store'])->name('extensions.store'); // Upload proof and save
         }); // End of the verified group
     }); // End of the tenant group
 }); // End of the auth group

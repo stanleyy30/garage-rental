@@ -2,12 +2,14 @@
 
 namespace App\Http\Requests; // This file lives in app/Http/Requests
 
+use App\Http\Requests\Concerns\RequiresPaymentProof; // Shared upload rule
+
 class StoreRentalRequest extends RentalRequest // The final "Confirm and pay" step: the same rules plus the payment proof
 { // Start of the class
+    use RequiresPaymentProof; // Gives this class paymentProofRule()
+
     public function rules(): array // What every field must look like
     { // Start of rules()
-        return parent::rules() + [ // All rules of RentalRequest, plus ...
-            'payment_proof' => ['required', 'image', 'mimes:jpg,jpeg,png', 'max:1024'], // ... a jpg/png image of at most 1 MB
-        ]; // End of the list
+        return parent::rules() + $this->paymentProofRule(); // All rental rules plus the image rule
     } // End of rules()
 } // End of the class
