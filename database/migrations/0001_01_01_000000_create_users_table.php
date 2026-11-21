@@ -1,49 +1,29 @@
-<?php
+<?php // Start of a PHP file
 
-use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
+use Illuminate\Database\Migrations\Migration; // Base class every migration extends
+use Illuminate\Database\Schema\Blueprint; // Object used to describe the columns of a table
+use Illuminate\Support\Facades\Schema; // Tool that creates and drops tables
 
-return new class extends Migration
-{
-    /**
-     * Run the migrations.
-     */
-    public function up(): void
-    {
-        Schema::create('users', function (Blueprint $table) {
-            $table->id();
-            $table->string('name');
-            $table->string('email')->unique();
-            $table->timestamp('email_verified_at')->nullable();
-            $table->string('password');
-            $table->rememberToken();
-            $table->timestamps();
-        });
+return new class extends Migration // This file returns one migration object (an anonymous class)
+{ // Start of the class body
+    public function up(): void // up() runs on "php artisan migrate" and creates the table
+    { // Start of up()
+        Schema::create('users', function (Blueprint $table) { // Create the "users" table for admins and tenants
+            $table->id('user_id'); // Primary key "user_id": BIGINT, auto-increment
+            $table->string('nik', 16)->nullable()->unique(); // NIK: 16 characters, empty for admins, no duplicates
+            $table->string('name', 100); // Full name, up to 100 characters
+            $table->string('phone_number', 15)->nullable(); // Phone number, empty for admins
+            $table->string('email', 100)->unique(); // Email, used as the username, no duplicates
+            $table->string('password'); // Hashed password (255 characters by default)
+            $table->string('role', 10); // 'admin' or 'tenant'
+            $table->string('verification_status', 10)->default('pending'); // 'pending' / 'accepted' / 'rejected', starts as 'pending'
+            $table->timestamp('verified_at')->nullable(); // When the tenant was accepted or rejected
+            $table->timestamps(); // Adds created_at and updated_at
+        }); // End of the users table
+    } // End of up()
 
-        Schema::create('password_reset_tokens', function (Blueprint $table) {
-            $table->string('email')->primary();
-            $table->string('token');
-            $table->timestamp('created_at')->nullable();
-        });
-
-        Schema::create('sessions', function (Blueprint $table) {
-            $table->string('id')->primary();
-            $table->foreignId('user_id')->nullable()->index();
-            $table->string('ip_address', 45)->nullable();
-            $table->text('user_agent')->nullable();
-            $table->longText('payload');
-            $table->integer('last_activity')->index();
-        });
-    }
-
-    /**
-     * Reverse the migrations.
-     */
-    public function down(): void
-    {
-        Schema::dropIfExists('users');
-        Schema::dropIfExists('password_reset_tokens');
-        Schema::dropIfExists('sessions');
-    }
-};
+    public function down(): void // down() runs on rollback and removes what up() made
+    { // Start of down()
+        Schema::dropIfExists('users'); // Remove the users table
+    } // End of down()
+}; // End of the migration class
