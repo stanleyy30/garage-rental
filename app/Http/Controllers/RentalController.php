@@ -73,6 +73,7 @@ class RentalController extends Controller // Rent New Garage and My Rentals (ten
             'maxDailyDays' => $this->maxDailyDays($startDate), // ... the daily limit for that month
             'monthlyDays' => $this->monthlyDays($startDate), // ... the length of a monthly rental from that day
             'garageOptions' => $garages->mapWithKeys(fn (Garage $garage) => [$garage->garage_id => $this->garageOptionText($garage)]), // ... the garage dropdown
+            'kwhPrices' => json_encode($garages->filter(fn (Garage $garage) => $this->hasCharger($garage->type))->mapWithKeys(fn (Garage $garage) => [$garage->garage_id => $garage->electricity_price_per_kwh])), // ... the charging price of each E garage, for the live calculation
             'garageBookings' => json_encode($garages->mapWithKeys(fn (Garage $garage) => [ // ... and each garage's booked days, so the page can hide busy garages
                 $garage->garage_id => $garage->rentals->map(fn (Rental $rental) => [$rental->start_date->toDateString(), $rental->end_date->toDateString()]), // [first day, last day] per booking
             ])), // End of the bookings
@@ -171,19 +172,20 @@ class RentalController extends Controller // Rent New Garage and My Rentals (ten
         } // End of the plate checks
 
         $chargesHere = $this->hasCharger($garage->type); // Charging happens only in an E garage
-        $batteryPercent = $chargesHere ? ($data['battery_level_percent'] ?? null) : null; // Keep the battery % only when charging
-        $kwhToFull = $chargesHere ? ($data['kwh_to_full'] ?? null) : null; // Keep kWh to full only when charging
-        $capacity = $isElectric ? (float) $data['battery_capacity_kwh'] : null; // Max kWh, electric cars only
-        if (! $this->isValidBattery($garage->type, $batteryPercent === null ? null : (int) $batteryPercent, $kwhToFull === null ? null : (float) $kwhToFull, $capacity)) { // Battery numbers wrong
-            $errors['kwh_to_full'] = 'For charging, enter the remaining battery (0-99%) and the kWh until full (more than 0, at most the battery size).'; // Error under the kWh field
+        $capacity = $isElectric ? (float) $data['battery_capacity_kwh'] : null; // Battery size (max kWh), electric cars only
+        $remainingKwh = $chargesHere && isset($data['remaining_kwh']) ? (float) $data['remaining_kwh'] : null; // kWh left in the battery, only when charging
+        if (! $this->isValidBattery($garage->type, $remainingKwh, $capacity)) { // Battery numbers wrong
+            $errors['remaining_kwh'] = 'Enter the kWh left in the battery: from 0 up to less than the battery size' . ($capacity ? " ({$capacity} kWh)" : '') . '.'; // Error under the kWh field
         } // End of the battery check
 
         if ($errors !== []) { // Any rule failed ...
             throw ValidationException::withMessages($errors); // ... go back to the form and show the errors
         } // End of the error check
 
+        $batteryPercent = $chargesHere ? $this->batteryPercent($remainingKwh, $capacity) : null; // How full the battery is, worked out from the kWh left
+        $kwhToFull = $chargesHere ? $this->kwhToFull($remainingKwh, $capacity) : null; // kWh needed to fill it
         $rentalCost = $this->rentalCost($rentalType, $garage->daily_price, $days); // Garage cost
-        $chargingCost = $this->chargingCost($garage->type, $kwhToFull === null ? null : (float) $kwhToFull, $garage->electricity_price_per_kwh); // Charging cost
+        $chargingCost = $this->chargingCost($garage->type, $kwhToFull, $garage->electricity_price_per_kwh); // Charging cost
 
         return [ // Everything the preview and the save need
             'vehicleType' => $vehicleType, // Vehicle type
@@ -195,8 +197,9 @@ class RentalController extends Controller // Rent New Garage and My Rentals (ten
             'garage' => $garage, // Garage
             'startDate' => $startDate, // Start date
             'endDate' => $endDate, // End date
-            'batteryPercent' => $batteryPercent === null ? null : (int) $batteryPercent, // Remaining battery
-            'kwhToFull' => $kwhToFull === null ? null : (float) $kwhToFull, // kWh until full
+            'remainingKwh' => $remainingKwh, // kWh left in the battery
+            'batteryPercent' => $batteryPercent, // Remaining battery in percent
+            'kwhToFull' => $kwhToFull, // kWh until full
             'rentalCost' => $rentalCost, // Garage cost
             'chargingCost' => $chargingCost, // Charging cost
             'totalCost' => $rentalCost + $chargingCost, // Total
@@ -263,7 +266,7 @@ class RentalController extends Controller // Rent New Garage and My Rentals (ten
         ]; // End of the common rows
 
         if ($this->hasCharger($rental['garage']->type)) { // Charging rows only for an E garage
-            $rows[] = ['label' => 'Battery', 'value' => $rental['batteryPercent'] . '% left, ' . $rental['kwhToFull'] . ' kWh until full']; // Battery details
+            $rows[] = ['label' => 'Battery', 'value' => $rental['remainingKwh'] . ' of ' . $rental['batteryCapacity'] . ' kWh left (' . $rental['batteryPercent'] . '%), ' . $rental['kwhToFull'] . ' kWh until full']; // Battery details, worked out from the kWh left
             $rows[] = ['label' => 'Charging cost', 'value' => $rental['kwhToFull'] . ' kWh x ' . $this->rupiah($rental['garage']->electricity_price_per_kwh) . ' = ' . $this->rupiah($rental['chargingCost'])]; // Charging cost
         } // End of the charging rows
 

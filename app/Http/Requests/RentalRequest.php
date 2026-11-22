@@ -25,8 +25,7 @@ class RentalRequest extends FormRequest // The rules for the Rent New Garage for
             'start_date' => ['required', 'date_format:Y-m-d', 'after_or_equal:today'], // Today or a later day; earlier days are refused
             'days' => ['nullable', 'exclude_if:rental_type,monthly', 'required_if:rental_type,daily', 'integer', 'min:1'], // Number of days (daily only; the upper limit is checked by the controller)
             'garage_id' => ['required', 'string', 'exists:garages,garage_id'], // The chosen garage must exist
-            'battery_level_percent' => ['nullable', 'integer', 'min:0', 'max:100'], // Remaining battery (checked by the controller for E garages)
-            'kwh_to_full' => ['nullable', 'numeric', 'min:0', 'max:9999'], // kWh until full (checked by the controller for E garages)
+            'remaining_kwh' => ['nullable', 'numeric', 'min:0', 'max:9999'], // kWh left in the battery (checked by the controller for E garages)
         ]; // End of the list
     } // End of rules()
 

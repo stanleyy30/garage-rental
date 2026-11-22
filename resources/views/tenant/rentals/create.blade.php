@@ -29,7 +29,7 @@
         @if (count($garageOptions) === 0) {{-- The controller found no garage for this vehicle --}}
             <div class="alert alert-warning mb-0">There is no garage for this vehicle yet.</div> {{-- Nothing to rent --}}
         @else {{-- At least one garage --}}
-        <form method="POST" action="{{ route('tenant.rentals.preview') }}" class="row g-3" id="rent-form" novalidate data-today="{{ $today }}" data-bookings="{{ $garageBookings }}"> {{-- Sends the details to the "Calculate total" step; the data- values feed the calendar --}}
+        <form method="POST" action="{{ route('tenant.rentals.preview') }}" class="row g-3" id="rent-form" novalidate data-today="{{ $today }}" data-bookings="{{ $garageBookings }}" data-kwh-prices="{{ $kwhPrices }}"> {{-- Sends the details to the "Calculate total" step; the data- values feed the calendar --}}
             @csrf {{-- Anti-forgery token --}}
             <input type="hidden" name="vehicle_type" value="{{ $vehicleType }}"> {{-- Carries the chosen type --}}
 
@@ -54,7 +54,7 @@
             <div class="col-12"> {{-- Calendar column --}}
                 <label class="form-label">Start date: pick a day on the calendar</label> {{-- Label --}}
                 <input type="hidden" id="start_date" name="start_date" value="{{ old('start_date', $startDate) }}"> {{-- The picked day is sent from here --}}
-                <div class="border rounded p-3 bg-white @error('start_date') border-danger @enderror" id="rent-calendar"></div> {{-- The calendar is drawn here --}}
+                <div class="rc-box border rounded p-3 bg-white @error('start_date') border-danger @enderror" id="rent-calendar"></div> {{-- The calendar is drawn here --}}
                 <div class="form-text fs-6 mt-2" id="period-text"></div> {{-- e.g. "22 Nov 2026 to 21 Dec 2026 (29 days)" --}}
                 @error('start_date') <div class="text-danger small">{{ $message }}</div> @enderror {{-- Error text --}}
             </div> {{-- End of the calendar column --}}
@@ -69,11 +69,18 @@
                 @error('garage_id') <div class="invalid-feedback">{{ $message }}</div> @enderror {{-- Error text --}}
             </div> {{-- End of the garage column --}}
 
-            @if ($isElectric) {{-- Charging fields for electric cars --}}
-                <div class="col-12"><div class="form-text">Fill these in only if you chose an electric car garage (E…), where the battery is charged once.</div></div> {{-- Help text --}}
-                <div class="col-md-6"><x-form-input name="battery_level_percent" label="Remaining battery (%)" type="number" min="0" max="99" placeholder="25" /></div> {{-- Battery % --}}
-                <div class="col-md-6"><x-form-input name="kwh_to_full" label="kWh until full" type="number" step="0.01" min="0" placeholder="20" /></div> {{-- kWh to full --}}
-            @endif {{-- End of the charging fields --}}
+            @if ($isElectric) {{-- Charging part for electric cars --}}
+                <div class="col-12 d-none" id="charging-box"> {{-- Shown only after an electric car garage (E...) is chosen --}}
+                    <div class="rc-box border rounded p-3 bg-white"> {{-- Box around the charging part --}}
+                        <div class="fw-semibold mb-2">Battery charging (electric car garage)</div> {{-- Title --}}
+                        <p class="form-text mt-0">This garage charges your battery once until it is full. Enter how many kWh are left in the battery; the app works out the percent and the kWh it needs.</p> {{-- What happens --}}
+                        <div class="row g-3 align-items-end"> {{-- Field and result side by side --}}
+                            <div class="col-md-5"><x-form-input name="remaining_kwh" label="kWh left in the battery" type="number" step="0.01" min="0" placeholder="6.7" /></div> {{-- kWh left --}}
+                            <div class="col-md-7"><div class="alert alert-info mb-3 py-2" id="charging-text">Enter the battery size and the kWh left.</div></div> {{-- e.g. "25% left, 20 kWh until full, charging Rp 50.000" --}}
+                        </div> {{-- End of the row --}}
+                    </div> {{-- End of the box --}}
+                </div> {{-- End of the charging part --}}
+            @endif {{-- End of the charging part --}}
 
             <div class="col-12"><button type="submit" class="btn btn-primary">Calculate total</button></div> {{-- Go to the summary --}}
         </form> {{-- End of step 2 --}}
@@ -144,10 +151,37 @@
                 ? G.longDate(start) + ' to ' + G.longDate(end) + ' (' + length + ' days)' // Whole period
                 : 'Starts ' + G.longDate(start) + '. Enter the number of days to see the end date.'; // Days still missing
             showFreeGarages(G.isoDate(start), G.isoDate(end || start)); // Only garages free on all these days
+            form.dispatchEvent(new Event('garages-updated')); // Let the charging part check the chosen garage again
         } // End of update()
 
         typeSelect.addEventListener('change', update); // Daily/monthly changed
         daysInput.addEventListener('input', update); // Days typed or arrows used
+        const chargingBox = document.getElementById('charging-box'); // Charging part (electric cars only)
+        if (chargingBox) { // This is an electric car
+            const prices = JSON.parse(form.dataset.kwhPrices); // Charging price per kWh of each E garage
+            const capacityInput = document.getElementById('battery_capacity_kwh'); // Battery size
+            const remainingInput = document.getElementById('remaining_kwh'); // kWh left
+            const chargingText = document.getElementById('charging-text'); // Result line
+            const showCharging = () => { // Shows the charging part only for an E garage and works out the numbers
+                const price = prices[garageSelect.value]; // Price per kWh, only E garages have one
+                chargingBox.classList.toggle('d-none', price === undefined); // Hide it for a C garage
+                remainingInput.disabled = price === undefined; // A hidden field is not sent
+                const capacity = parseFloat(capacityInput.value); // Battery size
+                const remaining = parseFloat(remainingInput.value); // kWh left
+                if (!(capacity > 0) || !(remaining >= 0) || remaining >= capacity) { // Numbers missing or not possible
+                    chargingText.textContent = 'Enter the battery size and the kWh left (less than the battery size).'; // Say what is needed
+                    return; // Nothing to work out yet
+                } // End of the check
+                const toFull = Math.round((capacity - remaining) * 100) / 100; // kWh until full
+                const percent = Math.min(99, Math.floor(remaining / capacity * 100)); // Percent left, rounded down
+                chargingText.textContent = percent + '% left, ' + toFull + ' kWh until full, charging Rp ' + Math.round(toFull * price).toLocaleString('id-ID'); // e.g. "25% left, 20 kWh until full, charging Rp 50.000"
+            }; // End of showCharging()
+            [garageSelect, capacityInput, remainingInput].forEach((field) => field.addEventListener('input', showCharging)); // Recalculate when any of them changes
+            garageSelect.addEventListener('change', showCharging); // Dropdowns send "change"
+            form.addEventListener('garages-updated', showCharging); // The garage list was rebuilt
+            showCharging(); // Once when the page opens
+        } // End of the electric car part
+
         update(); // Draw once when the page opens
     })(); // Run it
 </script>

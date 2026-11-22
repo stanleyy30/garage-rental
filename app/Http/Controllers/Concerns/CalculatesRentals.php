@@ -60,18 +60,27 @@ trait CalculatesRentals // Every business rule and formula, shared by all contro
         return $type === GarageType::ElectricCar; // True for E garages
     } // End of hasCharger()
 
-    public function isValidBattery(GarageType $type, ?int $percent, ?float $kwhToFull, ?float $capacity): bool // Battery numbers for an electric car garage
+    public function isValidBattery(GarageType $type, ?float $remainingKwh, ?float $capacity): bool // Battery numbers for an electric car garage
     { // Start of isValidBattery()
         if (! $this->hasCharger($type)) { // No charger in this garage ...
             return true; // ... so there is nothing to check
         } // End of the no-charging case
 
-        $capacityOk = $capacity !== null && $capacity > 0; // Max kWh (battery size) must be filled and more than 0
-        $percentOk = $percent !== null && $percent >= 0 && $percent <= 99; // Remaining battery 0-99% (100% is already full)
-        $kwhOk = $kwhToFull !== null && $kwhToFull > 0 && $kwhToFull <= $capacity; // kWh to full: more than 0, at most the max kWh
+        $capacityOk = $capacity !== null && $capacity > 0; // Battery size (max kWh) must be filled and more than 0
+        $remainingOk = $remainingKwh !== null && $remainingKwh >= 0 && $remainingKwh < $capacity; // kWh left: 0 up to less than full
 
-        return $capacityOk && $percentOk && $kwhOk; // Valid only if all three checks pass
+        return $capacityOk && $remainingOk; // Valid only if both checks pass
     } // End of isValidBattery()
+
+    public function batteryPercent(float $remainingKwh, float $capacity): int // How full the battery is, in whole percent (0-99)
+    { // Start of batteryPercent()
+        return min(99, (int) floor($remainingKwh / $capacity * 100)); // kWh left / battery size x 100, rounded down; never 100 because it isn't full
+    } // End of batteryPercent()
+
+    public function kwhToFull(float $remainingKwh, float $capacity): float // kWh needed to fill the battery
+    { // Start of kwhToFull()
+        return round($capacity - $remainingKwh, 2); // Battery size - kWh left
+    } // End of kwhToFull()
 
     public function chargingCost(GarageType $type, ?float $kwhToFull, ?float $pricePerKwh): float // Cost of charging the battery once
     { // Start of chargingCost()
