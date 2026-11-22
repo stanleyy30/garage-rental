@@ -18,7 +18,6 @@
                 <div class="form-text fs-6 mt-2" id="period-text"></div> {{-- e.g. "From 30 Nov 2026 to 31 Dec 2026 (31 extra days)" --}}
             </div> {{-- End of the calendar column --}}
         </form> {{-- End of the form --}}
-        <p class="form-text mb-1">Pick the new end date on the calendar or type the number of extra days; the other one follows.</p> {{-- How to fill the form --}}
         <p class="form-text mb-0">Whole months counted from the current end date are charged at 25 x the daily price; the remaining days are charged daily.</p> {{-- Pricing rule --}}
     </div> {{-- End of padding --}}
 </div> {{-- End of the box --}}

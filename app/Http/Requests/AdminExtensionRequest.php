@@ -24,7 +24,7 @@ class AdminExtensionRequest extends FormRequest // The admin's extension form: a
         return [ // One entry per rule
             'new_end_date.after' => 'The new end date must be after the current end date.', // Same or earlier date
             'new_end_date.required_without' => 'Choose a new end date or enter the number of extra days.', // Both empty
-            'days.required_without' => 'Choose a new end date or enter the number of extra days.', // Both empty
+            'days.required_without' => 'Or enter the number of extra days here.', // Both empty (the date field already says what to do)
         ]; // End of the list
     } // End of messages()
 
