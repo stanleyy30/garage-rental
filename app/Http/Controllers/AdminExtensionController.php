@@ -7,6 +7,7 @@ use App\Http\Controllers\Concerns\HandlesExtensions; // Shared extension steps
 use App\Http\Requests\AdminExtensionRequest; // Validated form
 use App\Http\Requests\StoreAdminExtensionRequest; // Validated form + proof
 use App\Models\Rental; // The Rental model
+use Carbon\Carbon; // Date library (to read the picked date)
 use Illuminate\Http\RedirectResponse; // Return type for "go to another page"
 use Illuminate\Http\Request; // The incoming browser request
 use Illuminate\View\View; // Return type for "show a page"
@@ -48,14 +49,15 @@ class AdminExtensionController extends Controller // Extend Garage Rental: the a
             'rentalId' => $rental->rental_id, // ... the rental
             'garage' => $rental->garage_id . ' (' . $rental->garage->type->label() . ')', // ... its garage
             'tenant' => $rental->vehicle->tenant->name, // ... the tenant
-            'endDate' => $this->date($rental->end_date), // ... and the current end date
+            'endDate' => $this->date($rental->end_date), // ... the current end date
+            'firstNewEndDate' => $rental->end_date->copy()->addDay()->toDateString(), // ... and the earliest new end date for the calendar
         ]); // End of page()
     } // End of create()
 
     public function preview(AdminExtensionRequest $request, Rental $rental): View // POST /admin/extensions/{rental}/preview
     { // Start of preview()
         $this->ensureActive($rental); // Only running rentals
-        $extension = $this->calculateExtension($rental, (int) $request->validated('days')); // Any number of days, split into months + days
+        $extension = $this->calculateExtension($rental, $this->extraDays($request, $rental)); // New end date or days, split into months + days
 
         return $this->page('admin.extensions.preview', [ // Show the summary and the payment form
             'rentalId' => $rental->rental_id, // The rental being extended
@@ -67,13 +69,24 @@ class AdminExtensionController extends Controller // Extend Garage Rental: the a
     public function store(StoreAdminExtensionRequest $request, Rental $rental): RedirectResponse // POST /admin/extensions/{rental}
     { // Start of store()
         $this->ensureActive($rental); // Only running rentals
-        $extension = $this->calculateExtension($rental, (int) $request->validated('days')); // Calculate again
+        $extension = $this->calculateExtension($rental, $this->extraDays($request, $rental)); // Calculate again
 
         $this->saveExtension($rental, $extension, $request->file('payment_proof'), ExtensionStatus::Accepted); // Save it; the admin took the payment in person, so it counts at once
 
         return redirect()->route('admin.extensions.index') // Back to the list ...
             ->with('success', "Garage {$rental->garage_id} is extended until {$this->date($extension['newEndDate'])} for {$this->rupiah($extension['cost'])}."); // ... with a green message
     } // End of store()
+
+    private function extraDays(AdminExtensionRequest $request, Rental $rental): int // Extra days from the new end date, or the days typed in
+    { // Start of extraDays()
+        $newEndDate = $request->validated('new_end_date'); // Date picked on the calendar (may be empty)
+
+        if ($newEndDate) { // The admin changed the end date ...
+            return (int) $rental->end_date->diffInDays(Carbon::parse($newEndDate)); // ... so count the days between the two dates
+        } // End of the date case
+
+        return (int) $request->validated('days'); // Otherwise use the number of days typed in
+    } // End of extraDays()
 
     private function ensureActive(Rental $rental): void // Stops the request if the rental is not running today
     { // Start of ensureActive()
