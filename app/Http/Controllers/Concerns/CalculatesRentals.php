@@ -9,6 +9,7 @@ use App\Enums\VehicleType; // The VehicleType enum
 use App\Models\Garage; // The Garage model
 use App\Models\Rental; // The Rental model
 use Carbon\Carbon; // Date library used by Laravel
+use Illuminate\Database\Eloquent\Builder; // A database query that can still be extended
 
 trait CalculatesRentals // Every business rule and formula, shared by all controllers that need it
 { // Start of the trait
@@ -117,6 +118,22 @@ trait CalculatesRentals // Every business rule and formula, shared by all contro
         return $isOneMonth || $isDailyOnly; // Anything else must be asked from the admin
     } // End of isWithinBookingLimit()
 
+    public function normalizePlate(?string $plate): ?string // Writes a plate the standard way ('l1234ab' -> 'L 1234 AB'); null if it isn't a valid plate
+    { // Start of normalizePlate()
+        $compact = strtoupper(preg_replace('/\s+/', '', (string) $plate)); // Capitals, no spaces
+        if (preg_match('/^([A-Z]{1,2})([0-9]{1,4})([A-Z]{0,3})$/', $compact, $parts) !== 1) { // 1-2 letters, 1-4 digits, 0-3 letters ...
+            return null; // ... anything else is not a plate
+        } // End of the shape check
+
+        return trim($parts[1] . ' ' . $parts[2] . ' ' . $parts[3]); // Area code, number and letters with one space between
+    } // End of normalizePlate()
+
+    public function rentalsOverlapping(Carbon $start, Carbon $end): Builder // Rentals that share at least one day with start..end
+    { // Start of rentalsOverlapping()
+        return Rental::whereDate('start_date', '<=', $end) // Starts on or before the last day ...
+            ->whereDate('end_date', '>=', $start); // ... and ends on or after the first day
+    } // End of rentalsOverlapping()
+
     public function needsPlate(VehicleType $type): bool // Every vehicle needs a plate number except a bicycle
     { // Start of needsPlate()
         return $type !== VehicleType::Bicycle; // False only for bicycles
@@ -145,7 +162,7 @@ trait CalculatesRentals // Every business rule and formula, shared by all contro
         return $this->garageIdPrefix($type) . str_pad((string) $sequence, 3, '0', STR_PAD_LEFT); // Letter + number padded to 3 digits
     } // End of generateGarageId()
 
-    public function refreshGarageStatuses(): void // Garages whose rental has ended become available again
+    public function refreshGarageStatuses(): void // A garage is used while a rental covers today, otherwise available
     { // Start of refreshGarageStatuses()
         $busyGarageIds = Rental::whereDate('start_date', '<=', today()) // Rentals that started today or earlier ...
             ->whereDate('end_date', '>=', today()) // ... and end today or later

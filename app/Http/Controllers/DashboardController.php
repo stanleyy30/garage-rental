@@ -40,8 +40,24 @@ class DashboardController extends Controller // Home pages for the admin and the
             'statusColor' => $this->statusColor($status), // ... the alert colour
             'statusMessage' => $this->statusMessage($status), // ... and the message for this status
             'canRent' => $status === VerificationStatus::Accepted, // Only accepted tenants see the rent button
+            'canResubmit' => $status === VerificationStatus::Rejected, // Rejected tenants see the "send again" button
+            'updates' => $this->extensionUpdates($request->user()->user_id), // What the admin decided about this tenant's extensions lately
         ]); // End of page()
     } // End of tenant()
+
+    private function extensionUpdates(int $userId): array // Extensions decided in the last 14 days for this tenant's rentals
+    { // Start of extensionUpdates()
+        return Extension::with('rental') // Load each extension's rental too ...
+            ->whereHas('rental.vehicle', fn ($query) => $query->where('user_id', $userId)) // ... only this tenant's rentals
+            ->where('decided_at', '>=', now()->subDays(14)) // ... decided in the last two weeks
+            ->orderByDesc('decided_at') // ... newest first
+            ->get() // Run the query
+            ->map(fn (Extension $extension) => $this->extensionNotice($extension) + [ // Text and colour, plus ...
+                'garage' => $extension->rental->garage_id, // ... which garage
+                'when' => $extension->decided_at->format('d M Y H:i'), // ... when it happened
+            ]) // End of the rows
+            ->all(); // As a plain array
+    } // End of extensionUpdates()
 
     private function statusColor(VerificationStatus $status): string // Bootstrap colour for a status
     { // Start of statusColor()
@@ -57,7 +73,7 @@ class DashboardController extends Controller // Home pages for the admin and the
         return match ($status) { // Pick by status
             VerificationStatus::Pending => 'Your registration is waiting for admin verification.', // Still waiting
             VerificationStatus::Accepted => 'Your account is verified. You can rent a garage.', // Accepted
-            VerificationStatus::Rejected => "Your registration was rejected. You can't rent a garage.", // Rejected
+            VerificationStatus::Rejected => 'Your registration was rejected. Check that your NIK matches your KTP photo, correct your details and send the registration again.', // Rejected, with what to do next
         }; // End of match
     } // End of statusMessage()
 } // End of the class

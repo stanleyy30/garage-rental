@@ -12,4 +12,9 @@ class StoreRentalRequest extends RentalRequest // The final "Confirm and pay" st
     { // Start of rules()
         return parent::rules() + $this->paymentProofRule(); // All rental rules plus the image rule
     } // End of rules()
+
+    public function messages(): array // Our own error texts
+    { // Start of messages()
+        return parent::messages() + $this->paymentProofMessages(); // Texts for the form plus the payment proof
+    } // End of messages()
 } // End of the class

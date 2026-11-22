@@ -32,8 +32,9 @@ Route::middleware('auth')->group(function () { // Pages for logged-in users only
         Route::get('/garages', [GarageController::class, 'index'])->name('garages.index'); // Garage list and form
         Route::post('/garages', [GarageController::class, 'store'])->name('garages.store'); // Create a batch of garages
         Route::get('/extensions', [AdminExtensionController::class, 'index'])->name('extensions.index'); // Garages rented today
-        Route::get('/extensions/{rental}/create', [AdminExtensionController::class, 'create'])->name('extensions.create'); // Days form
-        Route::post('/extensions/{rental}/preview', [AdminExtensionController::class, 'preview'])->name('extensions.preview'); // Split and cost
+        Route::get('/extensions/{rental}/create', [AdminExtensionController::class, 'create'])->name('extensions.create'); // New end date or days form
+        Route::post('/extensions/{rental}/preview', [AdminExtensionController::class, 'preview'])->name('extensions.preview'); // Check the new end date
+        Route::get('/extensions/{rental}/preview', [AdminExtensionController::class, 'showPreview'])->name('extensions.preview.show'); // Split, cost and payment form
         Route::post('/extensions/{rental}', [AdminExtensionController::class, 'store'])->name('extensions.store'); // Upload proof and save
         Route::get('/extension-requests', [ExtensionRequestController::class, 'index'])->name('extension-requests.index'); // Requests to accept or reject
         Route::get('/extension-requests/{extension}/proof', [ExtensionRequestController::class, 'proof'])->name('extension-requests.proof'); // The tenant's payment proof
@@ -44,14 +45,18 @@ Route::middleware('auth')->group(function () { // Pages for logged-in users only
 
     Route::middleware('role:tenant')->prefix('tenant')->name('tenant.')->group(function () { // Tenant pages: /tenant/..., names tenant.*
         Route::get('/', [DashboardController::class, 'tenant'])->name('dashboard'); // Tenant home page
+        Route::get('/registration', [AuthController::class, 'showResubmitForm'])->name('registration.edit'); // A rejected tenant corrects their details
+        Route::put('/registration', [AuthController::class, 'resubmit'])->name('registration.update'); // Send the registration again
 
         Route::middleware('verified_tenant')->group(function () { // Only tenants accepted by the admin
             Route::get('/rentals', [RentalController::class, 'index'])->name('rentals.index'); // My Rentals
             Route::get('/rentals/create', [RentalController::class, 'create'])->name('rentals.create'); // Rent form (step 1 and 2)
-            Route::post('/rentals/preview', [RentalController::class, 'preview'])->name('rentals.preview'); // Check and show the total
+            Route::post('/rentals/preview', [RentalController::class, 'preview'])->name('rentals.preview'); // Check the details
+            Route::get('/rentals/preview', [RentalController::class, 'showPreview'])->name('rentals.preview.show'); // Show the total and the payment form
             Route::post('/rentals', [RentalController::class, 'store'])->name('rentals.store'); // Confirm, upload proof and save
             Route::get('/rentals/{rental}/extend', [TenantExtensionController::class, 'create'])->name('extensions.create'); // Extension form
-            Route::post('/rentals/{rental}/extend/preview', [TenantExtensionController::class, 'preview'])->name('extensions.preview'); // Check limits, show cost
+            Route::post('/rentals/{rental}/extend/preview', [TenantExtensionController::class, 'preview'])->name('extensions.preview'); // Check the limits
+            Route::get('/rentals/{rental}/extend/preview', [TenantExtensionController::class, 'showPreview'])->name('extensions.preview.show'); // Show the cost and the payment form
             Route::post('/rentals/{rental}/extend', [TenantExtensionController::class, 'store'])->name('extensions.store'); // Upload proof and save
         }); // End of the verified group
     }); // End of the tenant group

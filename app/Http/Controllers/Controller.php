@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers; // This file lives in app/Http/Controllers
 
+use App\Enums\ExtensionStatus; // The ExtensionStatus enum
+use App\Models\Extension; // The Extension model
 use Illuminate\Support\Facades\Auth; // Laravel's login helper
 use Illuminate\View\View; // Return type for "show a page"
 
@@ -32,4 +34,16 @@ abstract class Controller // Parent of every controller
     { // Start of date()
         return $date ? $date->format('d M Y') : '-'; // A dash when there is no date
     } // End of date()
+
+    protected function extensionNotice(Extension $extension): array // Text and colour that tell the tenant what happened to an extension
+    { // Start of extensionNotice()
+        $newEnd = $this->date($extension->new_end_date); // The end date asked for
+
+        return match (true) { // Pick by status and by who entered it
+            $extension->status === ExtensionStatus::Pending => ['text' => "Extension to {$newEnd} waiting for admin", 'color' => 'warning'], // Still waiting
+            $extension->status === ExtensionStatus::Rejected => ['text' => "Extension to {$newEnd} was rejected", 'color' => 'danger'], // Refused by the admin
+            $extension->admin_payment_proof === null => ['text' => "Extended by the admin to {$newEnd}", 'color' => 'primary'], // Entered by the admin in person
+            default => ['text' => "Extension to {$newEnd} accepted", 'color' => 'success'], // The tenant's request was accepted
+        }; // End of match
+    } // End of extensionNotice()
 } // End of the class

@@ -3,14 +3,15 @@
 @section('title', 'Rent a Garage') {{-- Tab title --}}
 
 @section('content') {{-- Start of this page's content --}}
-<h1 class="h3 mb-3">Rent a Garage</h1> {{-- Page heading --}}
+<h1 class="h3 mb-1">Rent a Garage</h1> {{-- Page heading --}}
+<p class="text-muted">You can rent more than one garage at the same time, of the same type or of different types. Each vehicle needs its own garage.</p> {{-- Several garages at once --}}
 
 <div class="card shadow-sm mb-4"> {{-- Step 1 box --}}
     <div class="card-body"> {{-- Padding --}}
         <form method="GET" action="{{ route('tenant.rentals.create') }}" class="row g-2 align-items-end"> {{-- GET form: reloads this page with the chosen type --}}
             <div class="col-md-6"> {{-- Column for the dropdown --}}
                 <label for="vehicle_type_pick" class="form-label">1. Vehicle type</label> {{-- Label --}}
-                <select id="vehicle_type_pick" name="vehicle_type" class="form-select" required> {{-- Vehicle type dropdown --}}
+                <select id="vehicle_type_pick" name="vehicle_type" class="form-select"> {{-- Vehicle type dropdown --}}
                     @foreach ($vehicleTypes as $value => $label) {{-- One option per type from the controller --}}
                         <option value="{{ $value }}" @selected($vehicleType === $value)>{{ $label }}</option> {{-- Keeps the current choice selected --}}
                     @endforeach {{-- End of the options --}}
@@ -25,40 +26,43 @@
 <div class="card shadow-sm"> {{-- Step 2 box --}}
     <div class="card-header fw-bold">2. Rental details: {{ $vehicleTypeLabel }}</div> {{-- Box title with the chosen vehicle type --}}
     <div class="card-body"> {{-- Padding --}}
-        @if (count($garageOptions) === 0) {{-- The controller found no free garage for this vehicle --}}
-            <div class="alert alert-warning mb-0">No garage is available for this vehicle today.</div> {{-- Nothing to rent --}}
-        @else {{-- At least one free garage --}}
-        <form method="POST" action="{{ route('tenant.rentals.preview') }}" class="row g-3"> {{-- Sends the details to the "Calculate total" step --}}
+        @if (count($garageOptions) === 0) {{-- The controller found no garage for this vehicle --}}
+            <div class="alert alert-warning mb-0">There is no garage for this vehicle yet.</div> {{-- Nothing to rent --}}
+        @else {{-- At least one garage --}}
+        <form method="POST" action="{{ route('tenant.rentals.preview') }}" class="row g-3" id="rent-form" novalidate data-today="{{ $today }}" data-bookings="{{ $garageBookings }}"> {{-- Sends the details to the "Calculate total" step; the data- values feed the calendar --}}
             @csrf {{-- Anti-forgery token --}}
             <input type="hidden" name="vehicle_type" value="{{ $vehicleType }}"> {{-- Carries the chosen type --}}
 
             @if ($needsPlate) {{-- Every vehicle except a bicycle has a plate --}}
-                <div class="col-md-4"><x-form-input name="plate_number" label="Plate number" maxlength="12" required /></div> {{-- Plate --}}
+                <div class="col-md-4"><x-form-input name="plate_number" label="Plate number" maxlength="15" placeholder="L 1234 AB" hint="Each vehicle has its own plate number." /></div> {{-- Plate --}}
             @endif {{-- End of the plate field --}}
-            <div class="col-md-8"><x-form-input name="brand_model" label="Brand and model" maxlength="100" required /></div> {{-- Brand and model --}}
+            <div class="col-md-8"><x-form-input name="brand_model" label="Brand and model" maxlength="100" :placeholder="$brandExample" /></div> {{-- Brand and model --}}
             @if ($isElectric) {{-- Electric cars also give their battery size --}}
-                <div class="col-md-4"><x-form-input name="battery_capacity_kwh" label="Battery size (max kWh)" type="number" step="0.01" min="1" required /></div> {{-- Max kWh --}}
+                <div class="col-md-4"><x-form-input name="battery_capacity_kwh" label="Battery size (max kWh)" type="number" step="0.01" min="1" placeholder="26.7" /></div> {{-- Max kWh --}}
             @endif {{-- End of the battery size field --}}
 
             <div class="col-md-4"> {{-- Rental type column --}}
                 <label for="rental_type" class="form-label">Rental type</label> {{-- Label --}}
-                <select id="rental_type" name="rental_type" class="form-select" required> {{-- Daily / monthly --}}
-                    <option value="daily" @selected(old('rental_type') === 'daily')>Daily (1 to {{ $maxDailyDays }} days)</option> {{-- Daily, with this month's limit --}}
-                    <option value="monthly" @selected(old('rental_type') === 'monthly')>Monthly ({{ $monthlyDays }} days)</option> {{-- Monthly, with this month's length --}}
+                <select id="rental_type" name="rental_type" class="form-select @error('rental_type') is-invalid @enderror"> {{-- Daily / monthly --}}
+                    <option value="daily" @selected(old('rental_type', 'daily') === 'daily')>Daily (1 to {{ $maxDailyDays }} days)</option> {{-- Daily; the limit follows the start month --}}
+                    <option value="monthly" @selected(old('rental_type') === 'monthly')>Monthly ({{ $monthlyDays }} days)</option> {{-- Monthly; the length follows the start month --}}
                 </select> {{-- End of the dropdown --}}
+                @error('rental_type') <div class="invalid-feedback">{{ $message }}</div> @enderror {{-- Error text --}}
             </div> {{-- End of the column --}}
-            <div class="col-md-4"><x-form-input name="days" label="Days (daily only)" type="number" min="1" :max="$maxDailyDays" /></div> {{-- Number of days --}}
-            <div class="col-md-4"> {{-- Start date column --}}
-                <label for="start_date" class="form-label">Start date</label> {{-- Label --}}
-                <input type="date" id="start_date" name="start_date" value="{{ $startDate }}" min="{{ $startDate }}" max="{{ $startDate }}" class="form-control @error('start_date') is-invalid @enderror" required> {{-- Calendar: min and max are today, so every other day is greyed out --}}
-                <div class="form-text">Bookings always start today.</div> {{-- Help text --}}
-                @error('start_date') <div class="invalid-feedback">{{ $message }}</div> @enderror {{-- Error text --}}
-            </div> {{-- End of the start date column --}}
+            <div class="col-md-4" id="days-box"><x-form-input name="days" label="Number of days" type="number" min="1" :max="$maxDailyDays" :placeholder="'1 to ' . $maxDailyDays" /></div> {{-- Number of days, daily only --}}
+
+            <div class="col-12"> {{-- Calendar column --}}
+                <label class="form-label">Start date: pick a day on the calendar</label> {{-- Label --}}
+                <input type="hidden" id="start_date" name="start_date" value="{{ old('start_date', $startDate) }}"> {{-- The picked day is sent from here --}}
+                <div class="border rounded p-3 bg-white @error('start_date') border-danger @enderror" id="rent-calendar"></div> {{-- The calendar is drawn here --}}
+                <div class="form-text fs-6 mt-2" id="period-text"></div> {{-- e.g. "22 Nov 2026 to 21 Dec 2026 (29 days)" --}}
+                @error('start_date') <div class="text-danger small">{{ $message }}</div> @enderror {{-- Error text --}}
+            </div> {{-- End of the calendar column --}}
 
             <div class="col-12"> {{-- Garage column --}}
-                <label for="garage_id" class="form-label">Garage (available today)</label> {{-- Label --}}
-                <select id="garage_id" name="garage_id" class="form-select @error('garage_id') is-invalid @enderror" required> {{-- Garages from the controller --}}
-                    @foreach ($garageOptions as $id => $text) {{-- One option per free, fitting garage --}}
+                <label for="garage_id" class="form-label">Garage (free on every day of your booking)</label> {{-- Label --}}
+                <select id="garage_id" name="garage_id" class="form-select @error('garage_id') is-invalid @enderror"> {{-- Garages from the controller --}}
+                    @foreach ($garageOptions as $id => $text) {{-- One option per garage that fits the vehicle --}}
                         <option value="{{ $id }}" @selected(old('garage_id') === $id)>{{ $text }}</option> {{-- e.g. "C001 - Car Garage - Rp 50.000 per day" --}}
                     @endforeach {{-- End of the options --}}
                 </select> {{-- End of the dropdown --}}
@@ -67,8 +71,8 @@
 
             @if ($isElectric) {{-- Charging fields for electric cars --}}
                 <div class="col-12"><div class="form-text">Fill these in only if you chose an electric car garage (E…), where the battery is charged once.</div></div> {{-- Help text --}}
-                <div class="col-md-6"><x-form-input name="battery_level_percent" label="Remaining battery (%)" type="number" min="0" max="99" /></div> {{-- Battery % --}}
-                <div class="col-md-6"><x-form-input name="kwh_to_full" label="kWh until full" type="number" step="0.01" min="0" /></div> {{-- kWh to full --}}
+                <div class="col-md-6"><x-form-input name="battery_level_percent" label="Remaining battery (%)" type="number" min="0" max="99" placeholder="25" /></div> {{-- Battery % --}}
+                <div class="col-md-6"><x-form-input name="kwh_to_full" label="kWh until full" type="number" step="0.01" min="0" placeholder="20" /></div> {{-- kWh to full --}}
             @endif {{-- End of the charging fields --}}
 
             <div class="col-12"><button type="submit" class="btn btn-primary">Calculate total</button></div> {{-- Go to the summary --}}
@@ -78,3 +82,73 @@
 </div> {{-- End of step 2 box --}}
 @endif {{-- End of step 2 --}}
 @endsection {{-- End of this page's content --}}
+
+@push('scripts') {{-- Script for this page only --}}
+<script>
+    (function () { // Keep the names inside this block
+        const form = document.getElementById('rent-form'); // The rental form
+        if (!form) { // Step 1 or no garages: nothing to wire up
+            return; // Stop here
+        } // End of the check
+        const G = window.GarageRental; // Date helpers and the calendar
+        const startInput = document.getElementById('start_date'); // Hidden start date
+        const typeSelect = document.getElementById('rental_type'); // Daily / monthly
+        const daysBox = document.getElementById('days-box'); // Box around the days field
+        const daysInput = document.getElementById('days'); // Number of days
+        const garageSelect = document.getElementById('garage_id'); // Garage dropdown
+        const periodText = document.getElementById('period-text'); // Line under the calendar
+        const bookings = JSON.parse(form.dataset.bookings); // Booked days per garage
+        const allGarages = Array.from(garageSelect.options).map((option) => ({ id: option.value, text: option.text })); // Every garage from the server
+        const wanted = garageSelect.value; // The garage chosen before, if any
+
+        const calendar = new G.RangeCalendar(document.getElementById('rent-calendar'), { // Draw the calendar ...
+            min: G.parseDate(form.dataset.today), // ... days before today are greyed out
+            startLabel: 'Start date', // ... legend for the first day
+            endLabel: 'End date', // ... legend for the last day
+            onPick: (day) => { startInput.value = G.isoDate(day); update(); }, // ... clicking a day makes it the start date
+        }); // End of the calendar
+        calendar.showMonthOf(G.parseDate(startInput.value) || calendar.min); // Open on the month of the start date
+
+        function bookingLength(start) { // Number of days of the booking, or null while the days are still empty
+            if (typeSelect.value === 'monthly') { // Monthly ...
+                return G.daysInMonth(start); // ... as many days as the start month
+            } // End of the monthly case
+            const days = parseInt(daysInput.value, 10); // Days typed in
+            return days > 0 ? days : null; // Only a positive number counts
+        } // End of bookingLength()
+
+        function showFreeGarages(firstDay, lastDay) { // Keeps only garages with no booking on these days
+            const chosen = garageSelect.value || wanted; // Keep the current choice when it is still free
+            const free = allGarages.filter((garage) => !(bookings[garage.id] || []).some((booked) => booked[0] <= lastDay && booked[1] >= firstDay)); // No booking shares a day
+            garageSelect.innerHTML = ''; // Empty the dropdown
+            free.forEach((garage) => garageSelect.add(new Option(garage.text, garage.id, false, garage.id === chosen))); // Add the free ones back
+            if (free.length === 0) { // Every garage is busy on these days
+                garageSelect.add(new Option('No garage is free on these days. Try other dates.', '')); // Say so
+            } // End of the empty case
+        } // End of showFreeGarages()
+
+        function update() { // Redraws everything after any change
+            const start = G.parseDate(startInput.value) || calendar.min; // The start date
+            const monthDays = G.daysInMonth(start); // Length of the start month
+            const isMonthly = typeSelect.value === 'monthly'; // Monthly chosen?
+            typeSelect.options[0].text = 'Daily (1 to ' + (monthDays - 1) + ' days)'; // Daily limit for this month
+            typeSelect.options[1].text = 'Monthly (' + monthDays + ' days)'; // Monthly length for this month
+            daysInput.max = monthDays - 1; // The arrows stop at the limit
+            daysInput.placeholder = '1 to ' + (monthDays - 1); // Grey hint with the limit
+            daysBox.classList.toggle('d-none', isMonthly); // Days are only asked for a daily rental
+            daysInput.disabled = isMonthly; // A hidden field is not sent
+            const length = bookingLength(start); // Number of days, if known
+            const end = length ? G.addDays(start, length) : null; // End date, if known
+            calendar.setRange(start, end); // Mark the booking on the calendar
+            periodText.textContent = end // Line under the calendar
+                ? G.longDate(start) + ' to ' + G.longDate(end) + ' (' + length + ' days)' // Whole period
+                : 'Starts ' + G.longDate(start) + '. Enter the number of days to see the end date.'; // Days still missing
+            showFreeGarages(G.isoDate(start), G.isoDate(end || start)); // Only garages free on all these days
+        } // End of update()
+
+        typeSelect.addEventListener('change', update); // Daily/monthly changed
+        daysInput.addEventListener('input', update); // Days typed or arrows used
+        update(); // Draw once when the page opens
+    })(); // Run it
+</script>
+@endpush {{-- End of the script --}}
