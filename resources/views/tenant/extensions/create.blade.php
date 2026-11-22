@@ -4,7 +4,7 @@
 
 @section('content') {{-- Start of this page's content --}}
 <h1 class="h3 mb-3">Extend Rental</h1> {{-- Page heading --}}
-<p>Garage <strong>{{ $garage }}</strong>, ends on <strong>{{ $endDate }}</strong>.</p> {{-- Which rental --}}
+<p>Garage <strong>{{ $garage }}</strong>, ends on <strong>{{ $endDate }}</strong>. Your vehicle stays in this same garage; only the end date moves.</p> {{-- Which rental, and that the garage doesn't change --}}
 <p class="text-muted">In the app you can extend daily (1 to {{ $maxDailyDays }} days) or monthly ({{ $monthlyDays }} days). For any other length, ask the admin.</p> {{-- The booking limits --}}
 
 <div class="card shadow-sm"> {{-- Form box --}}
