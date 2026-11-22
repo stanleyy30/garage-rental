@@ -35,7 +35,7 @@
         return date.getUTCDate() + ' ' + MONTHS[date.getUTCMonth()] + ' ' + date.getUTCFullYear(); // Day, short month, year
     } // End of longDate()
 
-    class RangeCalendar { // Two months side by side with a start and an end date marked, like a booking site
+    class RangeCalendar { // One month at a time with a start and an end date marked, like a booking site
         constructor(element, options) { // element: where to draw; options: min, onPick, startLabel, endLabel
             this.element = element; // Box that holds the calendar
             this.min = options.min; // Earliest day that can be clicked
@@ -56,12 +56,7 @@
             this.draw(); // Show the change
         } // End of setRange()
 
-        showRange(start, end) { // Moves the calendar so the end date is visible, keeping the start on screen when both fit
-            const gap = (end.getUTCFullYear() - start.getUTCFullYear()) * 12 + end.getUTCMonth() - start.getUTCMonth(); // Months between them
-            this.showMonthOf(gap <= 1 ? start : new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth() - 1, 1))); // Both fit: start on the left; otherwise end on the right
-        } // End of showRange()
-
-        showMonthOf(date) { // Moves the calendar so this date's month is on the left
+        showMonthOf(date) { // Moves the calendar to the month of this date
             this.month = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1)); // First day of that month
             this.draw(); // Show the change
         } // End of showMonthOf()
@@ -99,7 +94,7 @@
         } // End of dayClass()
 
         monthHtml(first) { // HTML for one month table
-            let html = '<div class="rc-month"><div class="rc-title">' + MONTH_NAMES[first.getUTCMonth()] + ' ' + first.getUTCFullYear() + '</div>'; // Month name on top
+            let html = '<div class="rc-month">'; // Start of the month
             html += '<div class="rc-grid">' + WEEKDAYS.map((name) => '<span class="rc-head">' + name + '</span>').join(''); // Weekday titles
             for (let blank = 0; blank < first.getUTCDay(); blank++) { // Empty cells before day 1 (Sunday first)
                 html += '<span></span>'; // One empty cell
@@ -115,12 +110,12 @@
         } // End of monthHtml()
 
         draw() { // Rebuilds the whole calendar
-            const next = new Date(Date.UTC(this.month.getUTCFullYear(), this.month.getUTCMonth() + 1, 1)); // The right-hand month
             const canGoBack = this.month > new Date(Date.UTC(this.min.getUTCFullYear(), this.min.getUTCMonth(), 1)); // No going back past the first allowed month
-            this.element.innerHTML = '<div class="rc-nav">' // Arrow bar
+            this.element.innerHTML = '<div class="rc-nav">' // Bar with the arrows and the month name
                 + '<button type="button" class="btn btn-sm btn-outline-secondary" data-move="-1"' + (canGoBack ? '' : ' disabled') + ' aria-label="Previous month">&lsaquo;</button>' // Back arrow
+                + '<span class="rc-title">' + MONTH_NAMES[this.month.getUTCMonth()] + ' ' + this.month.getUTCFullYear() + '</span>' // Month name between the arrows
                 + '<button type="button" class="btn btn-sm btn-outline-secondary" data-move="1" aria-label="Next month">&rsaquo;</button></div>' // Forward arrow
-                + '<div class="rc-months">' + this.monthHtml(this.month) + this.monthHtml(next) + '</div>' // The two months
+                + this.monthHtml(this.month) // The month
                 + '<div class="rc-legend"><span class="rc-key rc-start"></span> ' + this.startLabel + ' <span class="rc-key rc-between"></span> ' + this.betweenLabel + ' <span class="rc-key rc-end"></span> ' + this.endLabel + '</div>'; // Colour legend
         } // End of draw()
     } // End of RangeCalendar

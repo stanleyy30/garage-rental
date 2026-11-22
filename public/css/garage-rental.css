@@ -1,7 +1,7 @@
 /* Styles for the booking calendar and the image viewer */
-.rc-nav { display: flex; justify-content: space-between; margin-bottom: .5rem; } /* Arrow buttons at both ends */
-.rc-months { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 1.5rem; } /* Two months side by side, stacked on phones */
-.rc-title { text-align: center; font-weight: 600; margin-bottom: .4rem; } /* Month name */
+.rc-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: .5rem; max-width: 420px; } /* Arrows on both sides of the month name */
+.rc-title { font-weight: 600; } /* Month name */
+.rc-month { max-width: 420px; } /* One month, not wider than a phone */
 .rc-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; text-align: center; } /* Seven columns, one per weekday */
 .rc-head { font-size: .75rem; color: #6c757d; padding: .2rem 0; } /* Weekday titles in grey */
 .rc-day { display: block; width: 100%; border: 0; background: transparent; padding: .35rem 0; border-radius: .35rem; font-size: .9rem; line-height: 1.2; } /* One day */
@@ -16,3 +16,4 @@ button.rc-start:hover, button.rc-end:hover { background: #0b5ed7; } /* Slightly 
 .viewer-frame { height: 70vh; display: flex; align-items: center; justify-content: center; overflow: hidden; background: #212529; border-radius: .5rem; } /* Dark box that holds the image */
 .viewer-frame img { transition: transform .2s ease; } /* Smooth turning */
 .thumb-button { border: 0; padding: 0; background: none; cursor: zoom-in; } /* Thumbnail that opens the viewer */
+.rc-box { max-width: 460px; } /* The calendar box fits one month */

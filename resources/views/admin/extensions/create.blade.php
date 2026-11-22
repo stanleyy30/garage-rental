@@ -14,7 +14,7 @@
             <div class="col-md-4"><x-form-input name="days" label="Or extra days the tenant asked for" type="number" min="1" max="3650" placeholder="31" /></div> {{-- Or any number of days --}}
             <div class="col-md-4 pt-md-4"><button type="submit" class="btn btn-primary mt-md-2">Calculate cost</button></div> {{-- Go to the summary --}}
             <div class="col-12"> {{-- Calendar column --}}
-                <div class="border rounded p-3 bg-white" id="admin-extend-calendar"></div> {{-- Click a day to make it the new end date --}}
+                <div class="rc-box border rounded p-3 bg-white" id="admin-extend-calendar"></div> {{-- Click a day to make it the new end date --}}
                 <div class="form-text fs-6 mt-2" id="period-text"></div> {{-- e.g. "From 30 Nov 2026 to 31 Dec 2026 (31 extra days)" --}}
             </div> {{-- End of the calendar column --}}
         </form> {{-- End of the form --}}
@@ -58,7 +58,7 @@
             const end = days > 0 ? G.addDays(from, days) : null; // Current end date + days
             dateInput.value = end ? G.isoDate(end) : ''; // Fill in the date
             if (end) { // A date is known
-                calendar.showRange(from, end); // Show it, with the current end date too when both fit
+                calendar.showMonthOf(end); // Show the month of the new end date
             } // End of the month move
             draw(end); // Show it
         } // End of fromDays()

@@ -21,7 +21,7 @@
             </div> {{-- End of the column --}}
             <div class="col-md-6" id="days-box"><x-form-input name="days" label="Number of extra days" type="number" min="1" :max="$maxDailyDays" :placeholder="'1 to ' . $maxDailyDays" /></div> {{-- Number of days, daily only --}}
             <div class="col-12"> {{-- Calendar column --}}
-                <div class="border rounded p-3 bg-white" id="extend-calendar"></div> {{-- Calendar with the current and the new end date --}}
+                <div class="rc-box border rounded p-3 bg-white" id="extend-calendar"></div> {{-- Calendar with the current and the new end date --}}
                 <div class="form-text fs-6 mt-2" id="period-text"></div> {{-- e.g. "From 30 Nov 2026 to 30 Dec 2026 (30 days)" --}}
             </div> {{-- End of the calendar column --}}
             <div class="col-12"><button type="submit" class="btn btn-primary">Calculate cost</button></div> {{-- Go to the summary --}}
@@ -49,7 +49,7 @@
             const days = isMonthly ? G.daysInMonth(from) : parseInt(daysInput.value, 10); // Number of extra days
             const end = days > 0 ? G.addDays(from, days) : null; // New end date, if known
             calendar.setRange(from, end); // Mark it on the calendar
-            calendar.showRange(from, end || from); // Keep both dates on screen
+            calendar.showMonthOf(end || from); // Show the month of the new end date
             periodText.textContent = end ? 'From ' + G.longDate(from) + ' to ' + G.longDate(end) + ' (' + days + ' extra days)' : 'Enter the number of extra days to see the new end date.'; // Line under the calendar
         } // End of update()
 
