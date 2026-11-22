@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Builder; // Query builder type, used in the rol
 use Illuminate\Foundation\Auth\User as Authenticatable; // Laravel's base class for users who can log in
 
 #[Table(name: 'users', key: 'user_id')] // Table "users", primary key "user_id" (not Laravel's default "id")
-#[Fillable(['nik', 'name', 'phone_number', 'email', 'password', 'role', 'verification_status', 'verified_at'])] // Columns that create()/update() may fill
+#[Fillable(['nik', 'ktp_photo', 'name', 'phone_number', 'email', 'password', 'role', 'verification_status', 'verified_at'])] // Columns that create()/update() may fill
 #[Hidden(['password'])] // Never show the password hash when the user is printed
 class User extends Authenticatable // Parent of Tenant and Admin; Laravel login uses this class for both roles
 { // Start of the class

@@ -4,7 +4,7 @@
 
 @section('content') {{-- Start of this page's content --}}
 <h1 class="h3 mb-3">Verify New Registrants</h1> {{-- Page heading --}}
-<p class="text-muted">Check each tenant's NIK against their KTP, then accept or reject the registration.</p> {{-- Short instruction --}}
+<p class="text-muted">Open each tenant's KTP photo and check that its NIK matches the NIK they typed, then accept or reject the registration.</p> {{-- Short instruction --}}
 
 @error('decision') {{-- An error came back from the controller --}}
     <div class="alert alert-danger">{{ $message }}</div> {{-- Show it in red --}}
@@ -15,11 +15,18 @@
     <div class="table-responsive"> {{-- Lets the table scroll sideways on phones --}}
         <table class="table table-striped mb-0 align-middle"> {{-- Striped table --}}
             <thead> {{-- Table header --}}
-                <tr><th>NIK</th><th>Name</th><th>Phone</th><th>Email</th><th>Registered</th><th class="text-end">Decision</th></tr> {{-- Column names --}}
+                <tr><th>KTP photo</th><th>NIK typed</th><th>Name</th><th>Phone</th><th>Email</th><th>Registered</th><th class="text-end">Decision</th></tr> {{-- Column names --}}
             </thead> {{-- End of the header --}}
             <tbody> {{-- Table body --}}
                 @forelse ($pendingTenants as $tenant) {{-- One row per waiting tenant; the @empty part shows when there are none --}}
                     <tr> {{-- Start of the row --}}
+                        <td> {{-- KTP cell --}}
+                            @if ($tenant['ktpUrl']) {{-- A photo was uploaded --}}
+                                <a href="{{ $tenant['ktpUrl'] }}" target="_blank"><img src="{{ $tenant['ktpUrl'] }}" alt="KTP of {{ $tenant['name'] }}" class="img-thumbnail" style="max-height: 70px"></a> {{-- Small preview; click opens it full size --}}
+                            @else {{-- Older account without a photo --}}
+                                <span class="text-muted">No photo</span> {{-- Nothing to show --}}
+                            @endif {{-- End of the KTP cell --}}
+                        </td> {{-- End of the KTP cell --}}
                         <td class="font-monospace">{{ $tenant['nik'] }}</td> {{-- NIK in a fixed-width font, easy to compare with the KTP --}}
                         <td>{{ $tenant['name'] }}</td> {{-- Name --}}
                         <td>{{ $tenant['phone'] }}</td> {{-- Phone --}}
@@ -35,7 +42,7 @@
                         </td> {{-- End of the buttons cell --}}
                     </tr> {{-- End of the row --}}
                 @empty {{-- Nobody is waiting --}}
-                    <tr><td colspan="6" class="text-muted">No new registrants.</td></tr> {{-- Empty message --}}
+                    <tr><td colspan="7" class="text-muted">No new registrants.</td></tr> {{-- Empty message --}}
                 @endforelse {{-- End of the rows --}}
             </tbody> {{-- End of the body --}}
         </table> {{-- End of the table --}}

@@ -20,7 +20,9 @@ class AuthController extends Controller // Registration, login, logout and the h
 
     public function register(RegisterRequest $request): RedirectResponse // POST /register (already validated by RegisterRequest)
     { // Start of register()
-        Tenant::create($request->safe()->only(['nik', 'name', 'phone_number', 'email', 'password'])); // Save the tenant; role and Pending status are set by the model
+        $ktpPath = $request->file('ktp_photo')->store('ktp-photos', 'local'); // Save the KTP photo privately in storage/app/private/ktp-photos
+
+        Tenant::create($request->safe()->only(['nik', 'name', 'phone_number', 'email', 'password']) + ['ktp_photo' => $ktpPath]); // Save the tenant; role and Pending status are set by the model
 
         return redirect()->route('login') // Go to the login page ...
             ->with('success', 'Registration successful. Please log in and wait for admin verification.'); // ... with a green message

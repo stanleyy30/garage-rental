@@ -26,6 +26,7 @@ Route::middleware('auth')->group(function () { // Pages for logged-in users only
     Route::middleware('role:admin')->prefix('admin')->name('admin.')->group(function () { // Admin pages: /admin/..., names admin.*
         Route::get('/', [DashboardController::class, 'admin'])->name('dashboard'); // Admin home page
         Route::get('/verifications', [VerificationController::class, 'index'])->name('verifications.index'); // Tenants to verify
+        Route::get('/verifications/{tenant}/ktp', [VerificationController::class, 'ktp'])->name('verifications.ktp'); // A tenant's KTP photo
         Route::patch('/verifications/{tenant}', [VerificationController::class, 'update'])->name('verifications.update'); // Accept or reject one tenant
         Route::get('/garages', [GarageController::class, 'index'])->name('garages.index'); // Garage list and form
         Route::post('/garages', [GarageController::class, 'store'])->name('garages.store'); // Create a batch of garages

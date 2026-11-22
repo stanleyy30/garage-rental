@@ -9,9 +9,10 @@
             <div class="card-body p-4"> {{-- Inner padding --}}
                 <h1 class="h4 mb-4 text-center">Register as a Tenant</h1> {{-- Page heading --}}
 
-                <form method="POST" action="{{ route('register') }}"> {{-- Send the form to POST /register --}}
+                <form method="POST" action="{{ route('register') }}" enctype="multipart/form-data"> {{-- Send the form to POST /register; multipart is needed for the KTP photo --}}
                     @csrf {{-- Hidden anti-forgery token --}}
                     <x-form-input name="nik" label="NIK (16 digits)" maxlength="16" inputmode="numeric" required autofocus /> {{-- NIK field --}}
+                    <x-form-input name="ktp_photo" label="KTP photo (jpg or png, max 2 MB)" type="file" accept=".jpg,.jpeg,.png" hint="The admin checks that the NIK on your KTP matches the NIK above." required /> {{-- KTP upload --}}
                     <x-form-input name="name" label="Full Name" maxlength="100" required /> {{-- Name field --}}
                     <x-form-input name="phone_number" label="Phone Number" maxlength="15" inputmode="numeric" required /> {{-- Phone field --}}
                     <x-form-input name="email" label="Email (used to log in)" type="email" maxlength="100" required /> {{-- Email field --}}

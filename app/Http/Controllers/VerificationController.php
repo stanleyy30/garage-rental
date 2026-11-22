@@ -6,6 +6,8 @@ use App\Enums\VerificationStatus; // The VerificationStatus enum
 use App\Http\Requests\VerifyTenantRequest; // Validated Accept / Reject form
 use App\Models\Tenant; // The Tenant model
 use Illuminate\Http\RedirectResponse; // Return type for "go to another page"
+use Illuminate\Support\Facades\Storage; // File storage (where KTP photos are kept)
+use Symfony\Component\HttpFoundation\StreamedResponse; // Return type for "send a file"
 use Illuminate\View\View; // Return type for "show a page"
 
 class VerificationController extends Controller // Verify New Registrant (admin only)
@@ -24,6 +26,7 @@ class VerificationController extends Controller // Verify New Registrant (admin 
             'pendingTenants' => $pending->map(fn (Tenant $tenant) => [ // One row per waiting tenant
                 'id' => $tenant->user_id, // For the Accept / Reject form
                 'nik' => $tenant->nik, // NIK to compare with the KTP
+                'ktpUrl' => $tenant->ktp_photo ? route('admin.verifications.ktp', $tenant) : null, // Link to the KTP photo, or null if none was uploaded
                 'name' => $tenant->name, // Full name
                 'phone' => $tenant->phone_number, // Phone
                 'email' => $tenant->email, // Email
@@ -39,6 +42,15 @@ class VerificationController extends Controller // Verify New Registrant (admin 
             ]), // End of the processed rows
         ]); // End of page()
     } // End of index()
+
+    public function ktp(Tenant $tenant): StreamedResponse // GET /admin/verifications/{tenant}/ktp: show the KTP photo (admin only)
+    { // Start of ktp()
+        if (! $tenant->ktp_photo || ! Storage::disk('local')->exists($tenant->ktp_photo)) { // No photo saved ...
+            abort(404); // ... nothing to show
+        } // End of the check
+
+        return Storage::disk('local')->response($tenant->ktp_photo); // Send the image from the private folder
+    } // End of ktp()
 
     public function update(VerifyTenantRequest $request, Tenant $tenant): RedirectResponse // PATCH /admin/verifications/{tenant}
     { // Start of update()

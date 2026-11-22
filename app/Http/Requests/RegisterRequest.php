@@ -19,6 +19,7 @@ class RegisterRequest extends FormRequest // The rules for the tenant registrati
     { // Start of rules()
         return [ // One entry per field
             'nik' => ['required', 'unique:users,nik', $this->checkNik(...)], // Filled, not registered before, exactly 16 digits
+            'ktp_photo' => ['required', 'image', 'mimes:jpg,jpeg,png', 'max:2048'], // Photo of the KTP, jpg/png, at most 2 MB, so the admin can compare the NIK
             'name' => ['required', 'string', 'max:100'], // Full name: filled, text, at most 100 characters
             'phone_number' => ['required', 'digits_between:10,15'], // Phone: filled, only digits, 10 to 15 of them
             'email' => ['required', 'email', 'max:100', 'unique:users,email'], // Email: valid, at most 100 characters, not used before
@@ -31,6 +32,7 @@ class RegisterRequest extends FormRequest // The rules for the tenant registrati
         return [ // Rule name => text
             'nik.unique' => 'This NIK is already registered.', // The NIK is already in the users table
             'email.unique' => 'This email is already registered.', // The email is already in the users table
+            'ktp_photo.required' => 'Upload a photo of your KTP.', // No file chosen
         ]; // End of the list
     } // End of messages()
 

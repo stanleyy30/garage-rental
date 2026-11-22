@@ -5,11 +5,19 @@ namespace Tests\Feature; // This file lives in tests/Feature
 use App\Models\Admin; // The Admin model
 use App\Models\Tenant; // The Tenant model
 use Illuminate\Foundation\Testing\RefreshDatabase; // Gives every test a fresh, empty database
+use Illuminate\Http\UploadedFile; // Fake uploaded files
+use Illuminate\Support\Facades\Storage; // File storage (faked in tests)
 use Tests\TestCase; // Laravel's base test class
 
 class AuthTest extends TestCase // Tests for registration, login, logout and role pages
 { // Start of the class
     use RefreshDatabase; // Rebuild the tables before each test
+
+    protected function setUp(): void // Runs before each test
+    { // Start of setUp()
+        parent::setUp(); // Laravel's own preparation
+        Storage::fake('local'); // KTP photos go to a fake private disk
+    } // End of setUp()
 
     private function validRegistration(array $changes = []): array // A correct registration form, with optional changes
     { // Start of validRegistration()
@@ -20,6 +28,7 @@ class AuthTest extends TestCase // Tests for registration, login, logout and rol
             'email' => 'budi@mail.test', // Email
             'password' => 'secret123', // 9 characters
             'password_confirmation' => 'secret123', // Same password
+            'ktp_photo' => UploadedFile::fake()->image('ktp.jpg', 860, 540)->size(300), // A 300 KB KTP photo
         ], $changes); // ... replaced by any changes given
     } // End of validRegistration()
 
@@ -29,6 +38,15 @@ class AuthTest extends TestCase // Tests for registration, login, logout and rol
 
         $response->assertRedirect('/login'); // Goes to the login page
         $this->assertDatabaseHas('users', ['email' => 'budi@mail.test', 'role' => 'tenant', 'verification_status' => 'pending']); // Saved as a pending tenant
+        Storage::disk('local')->assertExists(Tenant::first()->ktp_photo); // The KTP photo was saved privately
+    } // End of the test
+
+    public function test_registration_needs_a_ktp_photo_image(): void // Scenario: KTP upload rules
+    { // Start of the test
+        $this->post('/register', $this->validRegistration(['ktp_photo' => null]))->assertSessionHasErrors('ktp_photo'); // No photo
+        $this->post('/register', $this->validRegistration(['ktp_photo' => UploadedFile::fake()->create('ktp.pdf', 100, 'application/pdf')]))->assertSessionHasErrors('ktp_photo'); // Not an image
+        $this->post('/register', $this->validRegistration(['ktp_photo' => UploadedFile::fake()->image('ktp.jpg')->size(3000)]))->assertSessionHasErrors('ktp_photo'); // Bigger than 2 MB
+        $this->assertDatabaseCount('users', 0); // Nothing was saved
     } // End of the test
 
     public function test_registration_rejects_a_nik_that_is_not_16_digits(): void // Scenario: wrong NIK
