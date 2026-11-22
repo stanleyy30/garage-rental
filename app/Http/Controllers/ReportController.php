@@ -8,6 +8,7 @@ use App\Http\Requests\ReportRequest; // Validated filter form
 use App\Models\Extension; // The Extension model
 use App\Models\Rental; // The Rental model
 use Carbon\Carbon; // Date library used by Laravel
+use Illuminate\Database\Eloquent\Builder; // A database query that can still be extended
 use Illuminate\Support\Collection; // Laravel's list type
 use Illuminate\View\View; // Return type for "show a page"
 
@@ -91,7 +92,7 @@ class ReportController extends Controller // Rental reports (admin only)
         return $this->fillRows($buckets, $rentals, $extensions, fn (Rental $r) => $r->vehicle->user_id, fn (Extension $e) => $e->rental->vehicle->user_id); // Group by tenant
     } // End of tenantRows()
 
-    private function acceptedExtensions() // Only accepted extensions count as income
+    private function acceptedExtensions(): Builder // Only accepted extensions count as income
     { // Start of acceptedExtensions()
         return Extension::where('status', ExtensionStatus::Accepted); // Pending and rejected requests are left out
     } // End of acceptedExtensions()
