@@ -52,7 +52,7 @@ class RentalTest extends TestCase // Tests for Rent New Garage
 
     private function electricRental(array $changes = []): array // A correct electric car rental in E001, with optional changes
     { // Start of electricRental()
-        return array_merge(['vehicle_type' => 'electric_car', 'plate_number' => 'L 9 EV', 'brand_model' => 'Hyundai Ioniq 5', 'battery_capacity_kwh' => 60, 'rental_type' => 'daily', 'days' => 2, 'start_date' => '2026-02-15', 'garage_id' => 'E001', 'battery_level_percent' => 30, 'kwh_to_full' => 40], $changes); // Defaults + changes
+        return array_merge(['vehicle_type' => 'electric_car', 'plate_number' => 'L 9 EV', 'brand_model' => 'Hyundai Ioniq 5', 'battery_capacity_kwh' => 60, 'rental_type' => 'daily', 'days' => 2, 'start_date' => '2026-02-15', 'garage_id' => 'E001', 'remaining_kwh' => 20], $changes); // Defaults + changes
     } // End of electricRental()
 
     private function proof(): UploadedFile // A fake 100 KB jpg
@@ -174,14 +174,15 @@ class RentalTest extends TestCase // Tests for Rent New Garage
         $this->assertEquals(140000, $rental->rental_cost); // 2 x 70,000
         $this->assertEquals(100000, $rental->charging_cost); // 40 kWh x 2,500
         $this->assertEquals(240000, $rental->total_cost); // Garage + charging
-        $this->assertSame(30, $rental->battery_level_percent); // Battery % saved
+        $this->assertSame(33, $rental->battery_level_percent); // 20 of 60 kWh = 33%, worked out by the app
+        $this->assertEquals(40, $rental->kwh_to_full); // 60 - 20 = 40 kWh until full
     } // End of the test
 
     public function test_battery_numbers_are_checked_in_an_electric_car_garage(): void // Scenario: wrong battery input
     { // Start of the test
-        $this->actingAs($this->tenant)->post('/tenant/rentals/preview', $this->electricRental(['battery_level_percent' => 100]))->assertSessionHasErrors('kwh_to_full'); // 100% is already full
-        $this->actingAs($this->tenant)->post('/tenant/rentals/preview', $this->electricRental(['kwh_to_full' => 70]))->assertSessionHasErrors('kwh_to_full'); // More than the 60 kWh battery
-        $this->actingAs($this->tenant)->post('/tenant/rentals/preview', $this->electricRental(['kwh_to_full' => null]))->assertSessionHasErrors('kwh_to_full'); // Missing
+        $this->actingAs($this->tenant)->post('/tenant/rentals/preview', $this->electricRental(['remaining_kwh' => 60]))->assertSessionHasErrors('remaining_kwh'); // Already full
+        $this->actingAs($this->tenant)->post('/tenant/rentals/preview', $this->electricRental(['remaining_kwh' => 70]))->assertSessionHasErrors('remaining_kwh'); // More than the 60 kWh battery
+        $this->actingAs($this->tenant)->post('/tenant/rentals/preview', $this->electricRental(['remaining_kwh' => null]))->assertSessionHasErrors('remaining_kwh'); // Missing
         $this->actingAs($this->tenant)->post('/tenant/rentals/preview', $this->electricRental(['battery_capacity_kwh' => null]))->assertSessionHasErrors('battery_capacity_kwh'); // Battery size missing
     } // End of the test
 
@@ -272,5 +273,15 @@ class RentalTest extends TestCase // Tests for Rent New Garage
             ->assertSessionHasErrors(['plate_number' => 'Enter a plate number like L 1234 AB.']); // Refused
         $this->actingAs($this->tenant)->post('/tenant/rentals', $this->carRental(['start_date' => '2026-02-20']) + ['payment_proof' => $this->proof()]); // Same car again later
         $this->assertDatabaseCount('vehicles', 1); // Still one vehicle for that plate
+    } // End of the test
+
+    public function test_the_charging_part_is_worked_out_from_the_kwh_left(): void // Scenario: charging part and summary
+    { // Start of the test
+        $this->actingAs($this->tenant)->get('/tenant/rentals/create?vehicle_type=electric_car') // The rent form for an electric car
+            ->assertSee('id="charging-box"', false)->assertSee('kWh left in the battery') // Charging part, hidden until an E garage is chosen
+            ->assertSee('data-kwh-prices="{&quot;E001&quot;:2500}"', false); // Only E garages have a charging price
+        $this->actingAs($this->tenant)->followingRedirects()->post('/tenant/rentals/preview', $this->electricRental()) // 20 of 60 kWh left
+            ->assertSee('20 of 60 kWh left (33%), 40 kWh until full')->assertSee('40 kWh x Rp 2.500 = Rp 100.000'); // Worked out by the app
+        $this->actingAs($this->tenant)->get('/tenant/rentals/create?vehicle_type=car')->assertDontSee('id="charging-box"', false); // Petrol cars have no charging part
     } // End of the test
 } // End of the class

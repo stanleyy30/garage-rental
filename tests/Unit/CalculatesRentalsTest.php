@@ -70,12 +70,21 @@ class CalculatesRentalsTest extends TestCase // Unit tests for every formula in 
     public function test_battery_input_rules(): void // isValidBattery
     { // Start of the test
         $e = GarageType::ElectricCar; // Electric car garage
-        $this->assertTrue($this->rules->isValidBattery($e, 30, 40, 60)); // 30%, 40 of 60 kWh
-        $this->assertFalse($this->rules->isValidBattery($e, 100, 40, 60)); // 100% is already full
-        $this->assertFalse($this->rules->isValidBattery($e, 30, 70, 60)); // More than the battery holds
-        $this->assertFalse($this->rules->isValidBattery($e, 30, 0, 60)); // Nothing to charge
-        $this->assertFalse($this->rules->isValidBattery($e, 30, 40, null)); // Battery size missing
-        $this->assertTrue($this->rules->isValidBattery(GarageType::Car, null, null, null)); // No charger, nothing to check
+        $this->assertTrue($this->rules->isValidBattery($e, 20, 60)); // 20 of 60 kWh left
+        $this->assertTrue($this->rules->isValidBattery($e, 0, 60)); // Empty battery
+        $this->assertFalse($this->rules->isValidBattery($e, 60, 60)); // Already full: nothing to charge
+        $this->assertFalse($this->rules->isValidBattery($e, 70, 60)); // More than the battery holds
+        $this->assertFalse($this->rules->isValidBattery($e, null, 60)); // kWh left missing
+        $this->assertFalse($this->rules->isValidBattery($e, 20, null)); // Battery size missing
+        $this->assertTrue($this->rules->isValidBattery(GarageType::Car, null, null)); // No charger, nothing to check
+    } // End of the test
+
+    public function test_battery_percent_and_kwh_to_full_come_from_the_kwh_left(): void // batteryPercent + kwhToFull
+    { // Start of the test
+        $this->assertSame(25, $this->rules->batteryPercent(6.7, 26.7)); // 6.7 / 26.7 = 25.09% -> 25%
+        $this->assertEquals(20.0, $this->rules->kwhToFull(6.7, 26.7)); // 26.7 - 6.7 = 20 kWh
+        $this->assertSame(99, $this->rules->batteryPercent(26.69, 26.7)); // Almost full is still 99%, never 100%
+        $this->assertSame(0, $this->rules->batteryPercent(0, 60)); // Empty
     } // End of the test
 
     public static function extensionCases(): array // Old end date, extra days => months, daily days, cost at Rp 1,000/day

@@ -86,11 +86,14 @@ class ReportTest extends TestCase // Tests for the four rental reports
         $this->assertSame(0, $rows['Electric Car Garage']['rentals']); // No electric rentals
     } // End of the test
 
-    public function test_the_tenant_report_groups_by_tenant(): void // Scenario: per tenant
+    public function test_the_tenant_report_groups_by_tenant(): void // Scenario: per tenant, with what each tenant rented
     { // Start of the test
         $rows = collect($this->report(['type' => 'tenant']))->keyBy('label'); // Rows by tenant name
 
         $this->assertSame([2, 1, 'Rp 14.000'], [$rows['Budi']['rentals'], $rows['Budi']['extensions'], $rows['Budi']['income']]); // Budi
         $this->assertSame([1, 0, 'Rp 300'], [$rows['Sari']['rentals'], $rows['Sari']['extensions'], $rows['Sari']['income']]); // Sari
+        $this->assertCount(2, $rows['Budi']['details']); // Budi rented twice ...
+        $this->assertStringStartsWith('C001 (Car Garage), ', $rows['Budi']['details'][0]); // ... garage C001, listed under his name
+        $this->assertStringEndsWith('05 Oct 2026 - 10 Oct 2026', $rows['Budi']['details'][0]); // ... with the dates
     } // End of the test
 } // End of the class
