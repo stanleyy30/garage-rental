@@ -4,7 +4,15 @@
 
 @section('content') {{-- Start of this page's content --}}
 <h1 class="h3 mb-3">Extend Garage Rental</h1> {{-- Page heading --}}
-<p class="text-muted">Garages rented today. Choose one to extend by the number of days the tenant asked for.</p> {{-- Instruction --}}
+<p class="text-muted">Garages rented today. Find the renter by name, then extend their garage by the number of days they asked for.</p> {{-- Instruction --}}
+
+<form method="GET" action="{{ route('admin.extensions.index') }}" class="row g-2 mb-3"> {{-- Search by renter name --}}
+    <div class="col-md-6"><input type="search" name="tenant" value="{{ $tenantName }}" class="form-control" placeholder="Renter name" aria-label="Renter name"></div> {{-- Name box --}}
+    <div class="col-auto"><button type="submit" class="btn btn-outline-primary">Search</button></div> {{-- Run the search --}}
+    @if ($tenantName !== '') {{-- A name is being searched --}}
+        <div class="col-auto"><a href="{{ route('admin.extensions.index') }}" class="btn btn-link">Show all</a></div> {{-- Clear the search --}}
+    @endif {{-- End of the check --}}
+</form> {{-- End of the search --}}
 
 <div class="card shadow-sm"> {{-- List box --}}
     <div class="table-responsive"> {{-- Scroll wrapper for phones --}}
@@ -22,7 +30,7 @@
                         <td class="text-end"><a href="{{ route('admin.extensions.create', $rental['id']) }}" class="btn btn-primary btn-sm">Extend</a></td> {{-- Go to the form --}}
                     </tr> {{-- End of the row --}}
                 @empty {{-- Nothing rented today --}}
-                    <tr><td colspan="5" class="text-muted">No garage is rented today.</td></tr> {{-- Empty message --}}
+                    <tr><td colspan="5" class="text-muted">{{ $tenantName === '' ? 'No garage is rented today.' : 'No garage is rented today by a renter named "' . $tenantName . '".' }}</td></tr> {{-- Empty message --}}
                 @endforelse {{-- End of the rows --}}
             </tbody> {{-- End of the body --}}
         </table> {{-- End of the table --}}

@@ -8,21 +8,28 @@ use App\Http\Requests\AdminExtensionRequest; // Validated form
 use App\Http\Requests\StoreAdminExtensionRequest; // Validated form + proof
 use App\Models\Rental; // The Rental model
 use Illuminate\Http\RedirectResponse; // Return type for "go to another page"
+use Illuminate\Http\Request; // The incoming browser request
 use Illuminate\View\View; // Return type for "show a page"
 
 class AdminExtensionController extends Controller // Extend Garage Rental: the admin enters the days the tenant asked for outside the app
 { // Start of the class
     use HandlesExtensions; // Shared extension steps and formulas
 
-    public function index(): View // GET /admin/extensions: garages rented today
+    public function index(Request $request): View // GET /admin/extensions: garages rented today, found by the renter's name
     { // Start of index()
+        $tenantName = trim((string) $request->query('tenant')); // Name typed in the search box (empty = show all)
+
         $rentals = Rental::with(['garage', 'vehicle.tenant']) // Load garage, vehicle and tenant too ...
             ->whereDate('start_date', '<=', today()) // ... rentals that started today or earlier
             ->whereDate('end_date', '>=', today()) // ... and end today or later
+            ->when($tenantName !== '', fn ($query) => $query->whereHas('vehicle.tenant', fn ($tenant) => $tenant->where('name', 'like', '%' . $tenantName . '%'))) // ... only this renter's garages when a name is typed
             ->orderBy('garage_id') // In garage order
-            ->get(); // Run the query
+            ->get() // Run the query
+            ->sortBy(fn (Rental $rental) => $rental->vehicle->tenant->name) // Group the rows by renter name
+            ->values(); // Number the rows again after sorting
 
         return $this->page('admin.extensions.index', [ // Show the list with one ready-made row per rental
+            'tenantName' => $tenantName, // Keeps the typed name in the search box
             'rentals' => $rentals->map(fn (Rental $rental) => [ // Rows
                 'id' => $rental->rental_id, // For the Extend button
                 'garage' => $rental->garage_id . ' (' . $rental->garage->type->label() . ')', // Garage
