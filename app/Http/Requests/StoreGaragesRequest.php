@@ -19,14 +19,14 @@ class StoreGaragesRequest extends FormRequest // The rules for the Create Garage
             'type' => ['required', Rule::enum(GarageType::class)], // Must be one of the garage types
             'quantity' => ['required', 'integer', 'min:1', 'max:999'], // How many garages to create at once
             'daily_price' => ['required', 'numeric', 'min:1', 'max:99999999'], // Price per day in rupiah
-            'electricity_price_per_kwh' => ['nullable', 'required_if:type,electric_car', 'numeric', 'min:1', 'max:99999999'], // Needed only for electric car garages
+            'electricity_price_per_kwh' => ['exclude_unless:type,electric_car', 'required', 'numeric', 'min:1', 'max:99999999'], // Only for electric car garages; ignored for the other types
         ]; // End of the list
     } // End of rules()
 
     public function messages(): array // Our own error texts
     { // Start of messages()
         return [ // Rule name => text
-            'electricity_price_per_kwh.required_if' => 'Electric car garages need a price per kWh.', // Missing kWh price
+            'electricity_price_per_kwh.required' => 'Electric car garages need a price per kWh.', // Missing kWh price
         ]; // End of the list
     } // End of messages()
 } // End of the class
