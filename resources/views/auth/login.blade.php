@@ -9,10 +9,10 @@
             <div class="card-body p-4"> {{-- Inner padding --}}
                 <h1 class="h4 mb-4 text-center">Garage Rental Login</h1> {{-- Page heading --}}
 
-                <form method="POST" action="{{ route('login') }}"> {{-- Send the form to POST /login --}}
+                <form method="POST" action="{{ route('login') }}" novalidate> {{-- Send the form to POST /login; the server shows any error in red --}}
                     @csrf {{-- Hidden anti-forgery token --}}
-                    <x-form-input name="email" label="Email" type="email" required autofocus /> {{-- Email field --}}
-                    <x-form-input name="password" label="Password" type="password" required /> {{-- Password field --}}
+                    <x-form-input name="email" label="Email" type="email" placeholder="budi@example.com" autocomplete="email" autofocus /> {{-- Email field with a grey example --}}
+                    <x-form-input name="password" label="Password" type="password" placeholder="Your password" autocomplete="current-password" /> {{-- Password field --}}
                     <button type="submit" class="btn btn-primary w-100">Login</button> {{-- Submit button --}}
                 </form> {{-- End of the form --}}
 
