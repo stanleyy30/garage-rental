@@ -58,7 +58,7 @@ class RentalController extends Controller // Rent New Garage and My Rentals (ten
         return $this->page('tenant.rentals.create', $data + [ // Step 2: the full form, with ...
             'needsPlate' => $this->needsPlate($vehicleType), // ... the plate field unless it's a bicycle
             'isElectric' => $vehicleType === VehicleType::ElectricCar, // ... battery fields for electric cars
-            'startDate' => $this->date($today), // ... today's date
+            'startDate' => $today->toDateString(), // ... today's date for the date picker (YYYY-MM-DD); it is also the only day allowed
             'maxDailyDays' => $this->maxDailyDays($today), // ... the daily limit this month
             'monthlyDays' => $this->monthlyDays($today), // ... the length of a monthly rental from today
             'garageOptions' => $garages->mapWithKeys(fn (Garage $garage) => [ // ... and the garage dropdown

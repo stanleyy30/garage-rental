@@ -48,7 +48,12 @@
                 </select> {{-- End of the dropdown --}}
             </div> {{-- End of the column --}}
             <div class="col-md-4"><x-form-input name="days" label="Days (daily only)" type="number" min="1" :max="$maxDailyDays" /></div> {{-- Number of days --}}
-            <div class="col-md-4"><label class="form-label">Start date</label><input type="text" class="form-control" value="{{ $startDate }}" readonly></div> {{-- Always today, read-only --}}
+            <div class="col-md-4"> {{-- Start date column --}}
+                <label for="start_date" class="form-label">Start date</label> {{-- Label --}}
+                <input type="date" id="start_date" name="start_date" value="{{ $startDate }}" min="{{ $startDate }}" max="{{ $startDate }}" class="form-control @error('start_date') is-invalid @enderror" required> {{-- Calendar: min and max are today, so every other day is greyed out --}}
+                <div class="form-text">Bookings always start today.</div> {{-- Help text --}}
+                @error('start_date') <div class="invalid-feedback">{{ $message }}</div> @enderror {{-- Error text --}}
+            </div> {{-- End of the start date column --}}
 
             <div class="col-12"> {{-- Garage column --}}
                 <label for="garage_id" class="form-label">Garage (available today)</label> {{-- Label --}}

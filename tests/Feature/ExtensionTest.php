@@ -110,6 +110,14 @@ class ExtensionTest extends TestCase // Tests for Extend Own Rental (tenant) and
             ->assertSee('2 x 25 x Rp 1.000 = Rp 50.000')->assertSee('2 x Rp 1.000 = Rp 2.000')->assertSee('Rp 52.000'); // 2 months + 2 days
     } // End of the test
 
+    public function test_every_extension_needs_a_payment_proof(): void // Scenario: proof required for tenant and admin
+    { // Start of the test
+        $this->actingAs($this->admin)->post("/admin/extensions/{$this->rental->rental_id}", ['days' => 31])->assertSessionHasErrors('payment_proof'); // Admin without proof
+        $this->actingAs($this->tenant)->post("/tenant/rentals/{$this->rental->rental_id}/extend", ['rental_type' => 'monthly'])->assertSessionHasErrors('payment_proof'); // Tenant without proof
+        $this->assertDatabaseCount('extensions', 0); // Nothing saved
+        $this->assertSame('2026-11-30', $this->rental->fresh()->end_date->toDateString()); // End date unchanged
+    } // End of the test
+
     public function test_a_tenant_cannot_use_the_admin_extension_pages(): void // Scenario: role check
     { // Start of the test
         $this->actingAs($this->tenant)->get('/admin/extensions')->assertForbidden(); // Admin only

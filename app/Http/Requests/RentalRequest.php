@@ -22,6 +22,7 @@ class RentalRequest extends FormRequest // The rules for the Rent New Garage for
             'brand_model' => ['required', 'string', 'max:100'], // e.g. Honda Beat
             'battery_capacity_kwh' => ['nullable', 'required_if:vehicle_type,electric_car', 'numeric', 'min:1', 'max:9999'], // Max kWh, electric cars only
             'rental_type' => ['required', Rule::enum(RentalType::class)], // Daily or monthly
+            'start_date' => ['required', 'date', 'date_equals:today'], // A booking always starts today; any other day is refused
             'days' => ['nullable', 'required_if:rental_type,daily', 'integer', 'min:1'], // Number of days (daily only; the upper limit is checked by the controller)
             'garage_id' => ['required', 'string', 'exists:garages,garage_id'], // The chosen garage must exist
             'battery_level_percent' => ['nullable', 'integer', 'min:0', 'max:100'], // Remaining battery (checked by the controller for E garages)
@@ -35,6 +36,7 @@ class RentalRequest extends FormRequest // The rules for the Rent New Garage for
             'plate_number.required_unless' => 'A plate number is needed for every vehicle except a bicycle.', // Missing plate
             'battery_capacity_kwh.required_if' => 'Enter the battery size (max kWh) of the electric car.', // Missing battery size
             'days.required_if' => 'Enter the number of days for a daily rental.', // Missing days
+            'start_date.date_equals' => 'A booking always starts today.', // Another date was sent
         ]; // End of the list
     } // End of messages()
 } // End of the class

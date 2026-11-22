@@ -46,12 +46,12 @@ class RentalTest extends TestCase // Tests for Rent New Garage
 
     private function carRental(array $changes = []): array // A correct daily car rental form, with optional changes
     { // Start of carRental()
-        return array_merge(['vehicle_type' => 'car', 'plate_number' => 'L 1234 AB', 'brand_model' => 'Toyota Avanza', 'rental_type' => 'daily', 'days' => 5, 'garage_id' => 'C001'], $changes); // Defaults + changes
+        return array_merge(['vehicle_type' => 'car', 'plate_number' => 'L 1234 AB', 'brand_model' => 'Toyota Avanza', 'rental_type' => 'daily', 'days' => 5, 'start_date' => '2026-02-15', 'garage_id' => 'C001'], $changes); // Defaults + changes (start date = today)
     } // End of carRental()
 
     private function electricRental(array $changes = []): array // A correct electric car rental in E001, with optional changes
     { // Start of electricRental()
-        return array_merge(['vehicle_type' => 'electric_car', 'plate_number' => 'L 9 EV', 'brand_model' => 'Hyundai Ioniq 5', 'battery_capacity_kwh' => 60, 'rental_type' => 'daily', 'days' => 2, 'garage_id' => 'E001', 'battery_level_percent' => 30, 'kwh_to_full' => 40], $changes); // Defaults + changes
+        return array_merge(['vehicle_type' => 'electric_car', 'plate_number' => 'L 9 EV', 'brand_model' => 'Hyundai Ioniq 5', 'battery_capacity_kwh' => 60, 'rental_type' => 'daily', 'days' => 2, 'start_date' => '2026-02-15', 'garage_id' => 'E001', 'battery_level_percent' => 30, 'kwh_to_full' => 40], $changes); // Defaults + changes
     } // End of electricRental()
 
     private function proof(): UploadedFile // A fake 100 KB jpg
@@ -71,6 +71,26 @@ class RentalTest extends TestCase // Tests for Rent New Garage
             ->assertSee('C001 - Car Garage')->assertDontSee('E001 - ')->assertDontSee('S001 - '); // Only C garages
         $this->actingAs($this->tenant)->get('/tenant/rentals/create?vehicle_type=electric_car') // An electric car
             ->assertSee('C001 - Car Garage')->assertSee('E001 - Electric Car Garage')->assertDontSee('S001 - '); // C and E garages
+    } // End of the test
+
+    public function test_the_date_picker_only_allows_today(): void // Scenario: calendar limits
+    { // Start of the test
+        $this->actingAs($this->tenant)->get('/tenant/rentals/create?vehicle_type=car') // The rent form
+            ->assertSee('type="date" id="start_date" name="start_date" value="2026-02-15" min="2026-02-15" max="2026-02-15"', false); // Earlier and later days are greyed out
+    } // End of the test
+
+    public function test_a_booking_can_only_start_today(): void // Scenario: start date checked by the server
+    { // Start of the test
+        $this->actingAs($this->tenant)->post('/tenant/rentals/preview', $this->carRental(['start_date' => '2026-02-14']))->assertSessionHasErrors('start_date'); // Yesterday
+        $this->actingAs($this->tenant)->post('/tenant/rentals/preview', $this->carRental(['start_date' => '2026-02-16']))->assertSessionHasErrors('start_date'); // Tomorrow
+        $this->actingAs($this->tenant)->post('/tenant/rentals/preview', $this->carRental(['start_date' => null]))->assertSessionHasErrors('start_date'); // Missing
+    } // End of the test
+
+    public function test_only_tenants_can_book_a_garage(): void // Scenario: booking is done by the tenant on the website
+    { // Start of the test
+        $admin = \App\Models\Admin::create(['name' => 'Administrator', 'email' => 'admin@garage.test', 'password' => 'admin12345']); // The admin
+        $this->actingAs($admin)->get('/tenant/rentals/create')->assertForbidden(); // The admin has no booking page
+        $this->actingAs($admin)->post('/tenant/rentals', $this->carRental() + ['payment_proof' => $this->proof()])->assertForbidden(); // Nor can it save one
     } // End of the test
 
     public function test_the_preview_shows_the_total_before_paying(): void // Scenario: Calculate total
@@ -158,7 +178,7 @@ class RentalTest extends TestCase // Tests for Rent New Garage
 
     public function test_a_bicycle_needs_no_plate_but_other_vehicles_do(): void // Scenario: plate rule
     { // Start of the test
-        $this->actingAs($this->tenant)->post('/tenant/rentals/preview', ['vehicle_type' => 'bicycle', 'brand_model' => 'Polygon', 'rental_type' => 'daily', 'days' => 3, 'garage_id' => 'S001'])->assertOk(); // Bicycle without a plate
+        $this->actingAs($this->tenant)->post('/tenant/rentals/preview', ['vehicle_type' => 'bicycle', 'brand_model' => 'Polygon', 'rental_type' => 'daily', 'days' => 3, 'start_date' => '2026-02-15', 'garage_id' => 'S001'])->assertOk(); // Bicycle without a plate
         $this->actingAs($this->tenant)->post('/tenant/rentals/preview', $this->carRental(['plate_number' => null]))->assertSessionHasErrors('plate_number'); // Car without a plate
     } // End of the test
 
