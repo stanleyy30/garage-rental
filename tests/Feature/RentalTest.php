@@ -238,8 +238,11 @@ class RentalTest extends TestCase // Tests for Rent New Garage
 
         $this->actingAs($this->tenant)->get('/tenant/rentals/create?vehicle_type=car')->assertSee('C001 - Car Garage'); // Free again
         $this->assertSame('available', Garage::find('C001')->status->value); // Status updated
+        Carbon::setTestNow('2026-02-20 09:00:00'); // The end date itself
+        $this->actingAs($this->tenant)->get('/tenant/rentals/create?vehicle_type=car'); // Any page that refreshes the statuses
+        $this->assertSame('available', Garage::find('C001')->status->value); // The vehicle leaves on the end date, so the garage is free again
     } // End of the test
-    public function test_a_garage_is_free_only_when_no_booking_shares_a_day(): void // Scenario: future bookings
+    public function test_a_garage_can_be_booked_before_and_after_another_booking(): void // Scenario: future bookings
     { // Start of the test
         $this->actingAs($this->tenant)->post('/tenant/rentals', $this->carRental(['start_date' => '2026-02-20']) + ['payment_proof' => $this->proof()]); // C001 booked 20-25 Feb
 
@@ -248,6 +251,10 @@ class RentalTest extends TestCase // Tests for Rent New Garage
         $this->actingAs($this->tenant)->post('/tenant/rentals/preview', $this->carRental(['plate_number' => 'L 2 AB', 'days' => 4])) // 15-19 Feb is before it
             ->assertSessionHasNoErrors(); // Free
         $this->actingAs($this->tenant)->post('/tenant/rentals/preview', $this->carRental(['plate_number' => 'L 2 AB', 'start_date' => '2026-02-26'])) // From 26 Feb, after it
+            ->assertSessionHasNoErrors(); // Free
+        $this->actingAs($this->tenant)->post('/tenant/rentals/preview', $this->carRental(['plate_number' => 'L 2 AB', 'days' => 5])) // 15-20 Feb: leaves on the day the booking starts
+            ->assertSessionHasNoErrors(); // Free, like a hotel check-out and check-in on the same day
+        $this->actingAs($this->tenant)->post('/tenant/rentals/preview', $this->carRental(['plate_number' => 'L 2 AB', 'start_date' => '2026-02-25'])) // From 25 Feb, the day the booking ends
             ->assertSessionHasNoErrors(); // Free
     } // End of the test
 

@@ -219,9 +219,9 @@ class ExtensionTest extends TestCase // Tests for Extend Own Rental (tenant) and
         $vehicle = Vehicle::create(['user_id' => $other->user_id, 'type' => 'car', 'plate_number' => 'L 5 CD', 'brand_model' => 'Jazz']); // Their car
         Rental::create(['vehicle_id' => $vehicle->vehicle_id, 'garage_id' => 'C001', 'rental_type' => 'daily', 'days' => 5, 'start_date' => '2026-12-10', 'end_date' => '2026-12-15', 'rental_cost' => 5000, 'charging_cost' => 0, 'total_cost' => 5000, 'payment_proof' => 'y.jpg']); // C001 booked from 10 Dec
 
-        $this->actingAs($this->admin)->post("/admin/extensions/{$this->rental->rental_id}/preview", ['days' => 10]) // 30 Nov -> 10 Dec
-            ->assertSessionHasErrors(['days' => 'Garage C001 is booked by another tenant from 10 Dec 2026, so it can be extended until 09 Dec 2026 at the latest.']); // Refused
-        $this->actingAs($this->admin)->post("/admin/extensions/{$this->rental->rental_id}/preview", ['days' => 9])->assertSessionHasNoErrors(); // Until 9 Dec is fine
+        $this->actingAs($this->admin)->post("/admin/extensions/{$this->rental->rental_id}/preview", ['days' => 11]) // 30 Nov -> 11 Dec
+            ->assertSessionHasErrors(['days' => 'Garage C001 is booked by another tenant from 10 Dec 2026, so it can be extended until 10 Dec 2026 at the latest.']); // Refused
+        $this->actingAs($this->admin)->post("/admin/extensions/{$this->rental->rental_id}/preview", ['days' => 10])->assertSessionHasNoErrors(); // Leaving on 10 Dec, the day the other booking starts, is fine
         $this->actingAs($this->tenant)->post("/tenant/rentals/{$this->rental->rental_id}/extend/preview", ['rental_type' => 'monthly'])->assertSessionHasErrors('rental_type'); // A month is too long for the tenant too
     } // End of the test
 
