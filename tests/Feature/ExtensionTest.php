@@ -132,6 +132,29 @@ class ExtensionTest extends TestCase // Tests for Extend Own Rental (tenant) and
         $this->actingAs($this->admin)->get('/admin/extensions')->assertOk()->assertSee('C001 (Car Garage)')->assertSee('30 Nov 2026'); // Listed with its end date
     } // End of the test
 
+    public function test_the_admin_finds_a_renter_garage_by_name(): void // Scenario: in-person extension, search by renter name
+    { // Start of the test
+        $other = $this->acceptedTenant('siti@mail.test', '3578010101010002'); // A second renter
+        Garage::create(['garage_id' => 'C002', 'type' => 'car', 'daily_price' => 1000, 'status' => 'used']); // Their garage
+        $vehicle = Vehicle::create(['user_id' => $other->user_id, 'type' => 'car', 'plate_number' => 'L 2 AB', 'brand_model' => 'Jazz']); // Their car
+        Rental::create(['vehicle_id' => $vehicle->vehicle_id, 'garage_id' => 'C002', 'rental_type' => 'daily', 'days' => 5, 'start_date' => '2026-11-25', 'end_date' => '2026-11-30', 'rental_cost' => 5000, 'charging_cost' => 0, 'total_cost' => 5000, 'payment_proof' => 'y.jpg']); // Rented today
+
+        $this->actingAs($this->admin)->get('/admin/extensions?tenant=siti')->assertOk()->assertSee('C002 (Car Garage)')->assertDontSee('C001 (Car Garage)'); // Only Siti's garage
+        $this->actingAs($this->admin)->get('/admin/extensions?tenant=nobody')->assertOk()->assertSee('No garage is rented today by a renter named'); // No match
+        $this->actingAs($this->admin)->get('/admin/extensions')->assertOk()->assertSee('C001 (Car Garage)')->assertSee('C002 (Car Garage)'); // Empty search shows all
+    } // End of the test
+
+    public function test_a_tenant_extension_keeps_the_same_garage(): void // Scenario: website extension, no new garage
+    { // Start of the test
+        $this->actingAs($this->tenant)->get("/tenant/rentals/{$this->rental->rental_id}/extend")->assertOk()->assertSee('stays in this same garage'); // The form says so
+        $this->actingAs($this->tenant)->post("/tenant/rentals/{$this->rental->rental_id}/extend", ['rental_type' => 'monthly', 'payment_proof' => $this->proof()]); // The request
+        $this->actingAs($this->admin)->post('/admin/extension-requests/' . Extension::first()->extension_id . '/accept', ['payment_proof' => $this->proof()]); // Accepted
+
+        $this->assertDatabaseCount('rentals', 1); // No new rental
+        $this->assertSame('C001', $this->rental->fresh()->garage_id); // Same garage
+        $this->assertSame('2026-12-30', $this->rental->fresh()->end_date->toDateString()); // Only the end date moved
+    } // End of the test
+
     public function test_admin_extension_of_31_days_from_30_november_is_one_month_and_one_day(): void // Scenario: 30 Nov + 31 days
     { // Start of the test
         $this->actingAs($this->admin)->post("/admin/extensions/{$this->rental->rental_id}/preview", ['days' => 31]) // Preview
