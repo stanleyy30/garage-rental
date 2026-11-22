@@ -8,7 +8,7 @@
 
 <div class="row g-3"> {{-- Row of number cards --}}
     @foreach ($stats as $stat) {{-- One card per number from the controller --}}
-        <div class="col-6 col-md-3"> {{-- Two cards per row on phones, four on wider screens --}}
+        <div class="col-6 col-md"> {{-- Two cards per row on phones, four on wider screens --}}
             <div class="card shadow-sm text-center"> {{-- White card --}}
                 <div class="card-body"> {{-- Card padding --}}
                     <div class="display-6">{{ $stat['value'] }}</div> {{-- The number, large --}}

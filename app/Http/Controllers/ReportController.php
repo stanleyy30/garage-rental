@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers; // This file lives in app/Http/Controllers
 
+use App\Enums\ExtensionStatus; // The ExtensionStatus enum
 use App\Enums\GarageType; // The GarageType enum
 use App\Http\Requests\ReportRequest; // Validated filter form
 use App\Models\Extension; // The Extension model
@@ -45,9 +46,9 @@ class ReportController extends Controller // Rental reports (admin only)
         } // End of the loop
 
         $rentals = Rental::whereYear('start_date', $year)->get(); // Rentals that started in this year
-        $extensions = Extension::whereYear('created_at', $year)->get(); // Extensions paid in this year
+        $extensions = $this->acceptedExtensions()->whereYear('decided_at', $year)->get(); // Extensions accepted in this year
 
-        return $this->fillRows($buckets, $rentals, $extensions, fn (Rental $r) => $r->start_date->month, fn (Extension $e) => $e->created_at->month); // Group by month
+        return $this->fillRows($buckets, $rentals, $extensions, fn (Rental $r) => $r->start_date->month, fn (Extension $e) => $e->decided_at->month); // Group by month
     } // End of monthlyRows()
 
     private function dailyRows(int $year, int $month): array // One row per day of a month
@@ -59,9 +60,9 @@ class ReportController extends Controller // Rental reports (admin only)
         } // End of the loop
 
         $rentals = Rental::whereYear('start_date', $year)->whereMonth('start_date', $month)->get(); // Rentals that started in this month
-        $extensions = Extension::whereYear('created_at', $year)->whereMonth('created_at', $month)->get(); // Extensions paid in this month
+        $extensions = $this->acceptedExtensions()->whereYear('decided_at', $year)->whereMonth('decided_at', $month)->get(); // Extensions accepted in this month
 
-        return $this->fillRows($buckets, $rentals, $extensions, fn (Rental $r) => $r->start_date->day, fn (Extension $e) => $e->created_at->day); // Group by day
+        return $this->fillRows($buckets, $rentals, $extensions, fn (Rental $r) => $r->start_date->day, fn (Extension $e) => $e->decided_at->day); // Group by day
     } // End of dailyRows()
 
     private function garageTypeRows(): array // One row per garage type
@@ -72,7 +73,7 @@ class ReportController extends Controller // Rental reports (admin only)
         } // End of the loop
 
         $rentals = Rental::with('garage')->get(); // All rentals with their garage
-        $extensions = Extension::with('rental.garage')->get(); // All extensions with their rental's garage
+        $extensions = $this->acceptedExtensions()->with('rental.garage')->get(); // Accepted extensions with their rental's garage
 
         return $this->fillRows($buckets, $rentals, $extensions, fn (Rental $r) => $r->garage->type->value, fn (Extension $e) => $e->rental->garage->type->value); // Group by garage type
     } // End of garageTypeRows()
@@ -80,7 +81,7 @@ class ReportController extends Controller // Rental reports (admin only)
     private function tenantRows(): array // One row per tenant who has rented
     { // Start of tenantRows()
         $rentals = Rental::with('vehicle.tenant')->get(); // All rentals with their tenant
-        $extensions = Extension::with('rental.vehicle.tenant')->get(); // All extensions with their tenant
+        $extensions = $this->acceptedExtensions()->with('rental.vehicle.tenant')->get(); // Accepted extensions with their tenant
 
         $buckets = $rentals // Rows to fill: one per tenant ...
             ->mapWithKeys(fn (Rental $r) => [$r->vehicle->user_id => $r->vehicle->tenant->name]) // ... user_id => name
@@ -89,6 +90,11 @@ class ReportController extends Controller // Rental reports (admin only)
 
         return $this->fillRows($buckets, $rentals, $extensions, fn (Rental $r) => $r->vehicle->user_id, fn (Extension $e) => $e->rental->vehicle->user_id); // Group by tenant
     } // End of tenantRows()
+
+    private function acceptedExtensions() // Only accepted extensions count as income
+    { // Start of acceptedExtensions()
+        return Extension::where('status', ExtensionStatus::Accepted); // Pending and rejected requests are left out
+    } // End of acceptedExtensions()
 
     private function fillRows(array $buckets, Collection $rentals, Collection $extensions, callable $rentalKey, callable $extensionKey): array // Shared counting for all four reports
     { // Start of fillRows()

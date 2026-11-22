@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers; // This file lives in app/Http/Controllers
 
+use App\Enums\ExtensionStatus; // The ExtensionStatus enum
 use App\Enums\GarageStatus; // The GarageStatus enum
 use App\Enums\VerificationStatus; // The VerificationStatus enum
 use App\Http\Controllers\Concerns\CalculatesRentals; // Shared rules
+use App\Models\Extension; // The Extension model
 use App\Models\Garage; // The Garage model
 use App\Models\Rental; // The Rental model
 use App\Models\Tenant; // The Tenant model
@@ -22,6 +24,7 @@ class DashboardController extends Controller // Home pages for the admin and the
         return $this->page('admin.dashboard', [ // Show the admin home page with these numbers
             'stats' => [ // One card per number
                 ['label' => 'Registrants waiting', 'value' => Tenant::where('verification_status', VerificationStatus::Pending)->count()], // Pending tenants
+                ['label' => 'Extension requests', 'value' => Extension::where('status', ExtensionStatus::Pending)->count()], // Requests waiting for the admin
                 ['label' => 'Garages', 'value' => Garage::count()], // All garages
                 ['label' => 'Available garages', 'value' => Garage::where('status', GarageStatus::Available)->count()], // Free garages
                 ['label' => 'Rented today', 'value' => Rental::whereDate('start_date', '<=', today())->whereDate('end_date', '>=', today())->count()], // Active rentals

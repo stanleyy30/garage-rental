@@ -3,6 +3,7 @@
 use App\Http\Controllers\AdminExtensionController; // Extend Garage Rental (admin)
 use App\Http\Controllers\AuthController; // Registration, login, logout
 use App\Http\Controllers\DashboardController; // Home pages
+use App\Http\Controllers\ExtensionRequestController; // Tenants' extension requests (admin decides)
 use App\Http\Controllers\GarageController; // Create Garages
 use App\Http\Controllers\RentalController; // Rent New Garage and My Rentals
 use App\Http\Controllers\ReportController; // Rental reports
@@ -34,6 +35,10 @@ Route::middleware('auth')->group(function () { // Pages for logged-in users only
         Route::get('/extensions/{rental}/create', [AdminExtensionController::class, 'create'])->name('extensions.create'); // Days form
         Route::post('/extensions/{rental}/preview', [AdminExtensionController::class, 'preview'])->name('extensions.preview'); // Split and cost
         Route::post('/extensions/{rental}', [AdminExtensionController::class, 'store'])->name('extensions.store'); // Upload proof and save
+        Route::get('/extension-requests', [ExtensionRequestController::class, 'index'])->name('extension-requests.index'); // Requests to accept or reject
+        Route::get('/extension-requests/{extension}/proof', [ExtensionRequestController::class, 'proof'])->name('extension-requests.proof'); // The tenant's payment proof
+        Route::post('/extension-requests/{extension}/accept', [ExtensionRequestController::class, 'accept'])->name('extension-requests.accept'); // Accept with payment evidence
+        Route::post('/extension-requests/{extension}/reject', [ExtensionRequestController::class, 'reject'])->name('extension-requests.reject'); // Reject
         Route::get('/reports', [ReportController::class, 'index'])->name('reports.index'); // The four reports
     }); // End of the admin group
 

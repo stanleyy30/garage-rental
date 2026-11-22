@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Concerns; // This file lives in app/Http/Controllers/Concerns
 
+use App\Enums\ExtensionStatus; // The ExtensionStatus enum
 use App\Models\Extension; // The Extension model
 use App\Models\Rental; // The Rental model
 use Illuminate\Http\UploadedFile; // An uploaded file
@@ -44,21 +45,25 @@ trait HandlesExtensions // Steps shared by the tenant's and the admin's extensio
         ]; // End of the rows
     } // End of extensionSummary()
 
-    protected function saveExtension(Rental $rental, array $extension, UploadedFile $proof): void // Save the extension and move the rental's end date
+    protected function saveExtension(Rental $rental, array $extension, UploadedFile $proof, ExtensionStatus $status): void // Save the extension; an accepted one also moves the rental's end date
     { // Start of saveExtension()
         $proofPath = $proof->store('payment-proofs', 'public'); // Save the image in storage/app/public/payment-proofs
 
-        DB::transaction(function () use ($rental, $extension, $proofPath) { // Both rows are saved together
+        DB::transaction(function () use ($rental, $extension, $proofPath, $status) { // Both rows are saved together
             Extension::create([ // History row for the extension
                 'rental_id' => $rental->rental_id, // Which rental
                 'old_end_date' => $extension['oldEndDate'], // End date before
                 'new_end_date' => $extension['newEndDate'], // End date after
                 'extra_days' => $extension['days'], // Extra days
                 'extra_cost' => $extension['cost'], // Amount paid
+                'status' => $status, // Pending (tenant request) or Accepted (entered by the admin)
+                'decided_at' => $status === ExtensionStatus::Accepted ? now() : null, // Decision time, only when already accepted
                 'payment_proof' => $proofPath, // Where the image was saved
             ]); // End of create()
 
-            $rental->update(['end_date' => $extension['newEndDate']]); // The rental now ends later
+            if ($status === ExtensionStatus::Accepted) { // Only an accepted extension counts ...
+                $rental->update(['end_date' => $extension['newEndDate']]); // ... so only then does the rental end later
+            } // End of the accepted case
         }); // End of the transaction
     } // End of saveExtension()
 } // End of the trait

@@ -2,13 +2,14 @@
 
 namespace App\Models; // This file lives in app/Models
 
+use App\Enums\ExtensionStatus; // The ExtensionStatus enum
 use Illuminate\Database\Eloquent\Attributes\Fillable; // Attribute that lists the columns we may fill at once
 use Illuminate\Database\Eloquent\Attributes\Table; // Attribute that sets the primary key
 use Illuminate\Database\Eloquent\Model; // Laravel's base class for a database table
 use Illuminate\Database\Eloquent\Relations\BelongsTo; // Return type for "belongs to one"
 
 #[Table(key: 'extension_id')] // Table "extensions", primary key "extension_id"
-#[Fillable(['rental_id', 'old_end_date', 'new_end_date', 'extra_days', 'extra_cost', 'payment_proof'])] // Columns create() may fill
+#[Fillable(['rental_id', 'old_end_date', 'new_end_date', 'extra_days', 'extra_cost', 'status', 'payment_proof', 'admin_payment_proof', 'decided_at'])] // Columns create() may fill
 class Extension extends Model // One row of the "extensions" table
 { // Start of the class
     protected function casts(): array // How to convert each column
@@ -18,6 +19,8 @@ class Extension extends Model // One row of the "extensions" table
             'new_end_date' => 'date', // Text -> Carbon date
             'extra_days' => 'integer', // Make sure extra_days is an int
             'extra_cost' => 'float', // Decimal -> float
+            'status' => ExtensionStatus::class, // Text -> ExtensionStatus enum
+            'decided_at' => 'datetime', // Text -> Carbon date and time
         ]; // End of the list
     } // End of casts()
 

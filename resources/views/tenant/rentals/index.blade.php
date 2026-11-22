@@ -21,7 +21,9 @@
                         <td>{{ $rental['total'] }}</td> {{-- Amount paid --}}
                         <td><span class="badge bg-{{ $rental['statusColor'] }}">{{ $rental['status'] }}</span></td> {{-- Active / Ended --}}
                         <td class="text-end"> {{-- Action cell --}}
-                            @if ($rental['isActive']) {{-- Only running rentals can be extended --}}
+                            @if ($rental['waitingExtension']) {{-- A request already waits for the admin --}}
+                                <span class="badge bg-warning text-dark">Extension waiting for admin</span> {{-- No second request --}}
+                            @elseif ($rental['isActive']) {{-- Only running rentals can be extended --}}
                                 <a href="{{ route('tenant.extensions.create', $rental['id']) }}" class="btn btn-outline-primary btn-sm">Extend</a> {{-- Go to the extension form --}}
                             @endif {{-- End of the check --}}
                         </td> {{-- End of the action cell --}}

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers; // This file lives in app/Http/Controllers
 
+use App\Enums\ExtensionStatus; // The ExtensionStatus enum
 use App\Http\Controllers\Concerns\HandlesExtensions; // Shared extension steps
 use App\Http\Requests\AdminExtensionRequest; // Validated form
 use App\Http\Requests\StoreAdminExtensionRequest; // Validated form + proof
@@ -61,7 +62,7 @@ class AdminExtensionController extends Controller // Extend Garage Rental: the a
         $this->ensureActive($rental); // Only running rentals
         $extension = $this->calculateExtension($rental, (int) $request->validated('days')); // Calculate again
 
-        $this->saveExtension($rental, $extension, $request->file('payment_proof')); // Save it
+        $this->saveExtension($rental, $extension, $request->file('payment_proof'), ExtensionStatus::Accepted); // Save it; the admin took the payment in person, so it counts at once
 
         return redirect()->route('admin.extensions.index') // Back to the list ...
             ->with('success', "Garage {$rental->garage_id} is extended until {$this->date($extension['newEndDate'])} for {$this->rupiah($extension['cost'])}."); // ... with a green message

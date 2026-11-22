@@ -32,7 +32,8 @@ class ReportTest extends TestCase // Tests for the four rental reports
         $first = $this->rental($budi, 'C001', '2026-10-05', 5000); // October, Rp 5,000
         $this->rental($budi, 'C001', '2026-11-03', 7000); // November, Rp 7,000
         $this->rental($sari, 'S001', '2026-11-03', 300); // November, Rp 300
-        Extension::create(['rental_id' => $first->rental_id, 'old_end_date' => '2026-10-10', 'new_end_date' => '2026-10-12', 'extra_days' => 2, 'extra_cost' => 2000, 'payment_proof' => 'y.jpg']); // Extension paid today (November), Rp 2,000
+        Extension::create(['rental_id' => $first->rental_id, 'old_end_date' => '2026-10-10', 'new_end_date' => '2026-10-12', 'extra_days' => 2, 'extra_cost' => 2000, 'status' => 'accepted', 'payment_proof' => 'y.jpg', 'decided_at' => now()]); // Extension accepted today (November), Rp 2,000
+        Extension::create(['rental_id' => $first->rental_id, 'old_end_date' => '2026-10-12', 'new_end_date' => '2026-10-15', 'extra_days' => 3, 'extra_cost' => 9999, 'status' => 'pending', 'payment_proof' => 'z.jpg']); // A waiting request: must not count
     } // End of setUp()
 
     protected function tearDown(): void // Runs after each test

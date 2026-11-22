@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers; // This file lives in app/Http/Controllers
 
+use App\Enums\ExtensionStatus; // The ExtensionStatus enum
 use App\Enums\GarageStatus; // The GarageStatus enum
 use App\Enums\RentalType; // The RentalType enum
 use App\Enums\VehicleType; // The VehicleType enum
@@ -23,7 +24,7 @@ class RentalController extends Controller // Rent New Garage and My Rentals (ten
 
     public function index(Request $request): View // GET /tenant/rentals: the tenant's own rentals
     { // Start of index()
-        $rentals = Rental::with(['garage', 'vehicle']) // Load each rental's garage and vehicle too ...
+        $rentals = Rental::with(['garage', 'vehicle', 'extensions']) // Load each rental's garage, vehicle and extensions too ...
             ->whereHas('vehicle', fn ($query) => $query->where('user_id', $request->user()->user_id)) // ... only this tenant's vehicles
             ->orderByDesc('start_date') // Newest first
             ->get(); // Run the query
@@ -215,6 +216,7 @@ class RentalController extends Controller // Rent New Garage and My Rentals (ten
             'status' => $isActive ? 'Active' : 'Ended', // Status text
             'statusColor' => $isActive ? 'success' : 'secondary', // Green or grey
             'isActive' => $isActive, // Only active rentals can be extended
+            'waitingExtension' => $rental->extensions->contains('status', ExtensionStatus::Pending), // An extension request waits for the admin
         ]; // End of the row
     } // End of rentalRow()
 

@@ -6,6 +6,7 @@
         <li class="nav-item"><a class="nav-link" href="{{ route('admin.verifications.index') }}">Verify Registrants</a></li> {{-- Verify New Registrant --}}
         <li class="nav-item"><a class="nav-link" href="{{ route('admin.garages.index') }}">Garages</a></li> {{-- Create Garages --}}
         <li class="nav-item"><a class="nav-link" href="{{ route('admin.extensions.index') }}">Extend Rentals</a></li> {{-- Extend Garage Rental --}}
+        <li class="nav-item"><a class="nav-link" href="{{ route('admin.extension-requests.index') }}">Extension Requests</a></li> {{-- Tenants' requests to accept --}}
         <li class="nav-item"><a class="nav-link" href="{{ route('admin.reports.index') }}">Reports</a></li> {{-- Rental reports --}}
     </x-navbar> {{-- End of the top bar --}}
 @endsection {{-- End of the top bar section --}}

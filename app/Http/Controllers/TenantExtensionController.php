@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers; // This file lives in app/Http/Controllers
 
+use App\Enums\ExtensionStatus; // The ExtensionStatus enum
 use App\Enums\RentalType; // The RentalType enum
 use App\Http\Controllers\Concerns\HandlesExtensions; // Shared extension steps
 use App\Http\Requests\StoreTenantExtensionRequest; // Validated form + proof
@@ -46,10 +47,10 @@ class TenantExtensionController extends Controller // Extend Own Rental: the ten
         $this->ensureOwnActiveRental($request, $rental); // Only the tenant's own running rental
         $extension = $this->checkedExtension($rental, $request->validated()); // Check and calculate again
 
-        $this->saveExtension($rental, $extension, $request->file('payment_proof')); // Save it
+        $this->saveExtension($rental, $extension, $request->file('payment_proof'), ExtensionStatus::Pending); // Save it as a request; the admin must accept it
 
         return redirect()->route('tenant.rentals.index') // Back to My Rentals ...
-            ->with('success', "Garage {$rental->garage_id} is extended until {$this->date($extension['newEndDate'])}."); // ... with a green message
+            ->with('success', "Extension of garage {$rental->garage_id} until {$this->date($extension['newEndDate'])} is sent. It counts once the admin accepts it."); // ... with a green message
     } // End of store()
 
     private function ensureOwnActiveRental(Request $request, Rental $rental): void // Stops the request if the rental isn't this tenant's or has ended
@@ -60,6 +61,9 @@ class TenantExtensionController extends Controller // Extend Own Rental: the ten
         if ($rental->end_date->lt(today())) { // Already ended ...
             abort(403, 'This rental has ended and cannot be extended.'); // ... can't extend
         } // End of the active check
+        if ($rental->extensions()->where('status', ExtensionStatus::Pending)->exists()) { // A request is already waiting ...
+            abort(403, 'An extension of this rental is already waiting for the admin.'); // ... one request at a time
+        } // End of the pending check
     } // End of ensureOwnActiveRental()
 
     private function checkedExtension(Rental $rental, array $data): array // Applies the booking limits, then calculates
