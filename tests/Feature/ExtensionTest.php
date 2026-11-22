@@ -65,7 +65,7 @@ class ExtensionTest extends TestCase // Tests for Extend Own Rental (tenant) and
         $this->assertSame('2026-12-30', $extension->new_end_date->toDateString()); // November has 30 days -> 30 Dec
         $this->assertEquals(25000, $extension->extra_cost); // 25 x 1,000
         $this->assertSame('2026-11-30', $this->rental->fresh()->end_date->toDateString()); // The rental doesn't change yet
-        $this->actingAs($this->tenant)->get('/tenant/rentals')->assertSee('Extension waiting for admin'); // Shown on My Rentals
+        $this->actingAs($this->tenant)->get('/tenant/rentals')->assertSee('Extension to 30 Dec 2026 waiting for admin'); // Shown on My Rentals
         $this->actingAs($this->tenant)->get("/tenant/rentals/{$this->rental->rental_id}/extend")->assertForbidden(); // No second request while one waits
     } // End of the test
 
@@ -110,7 +110,7 @@ class ExtensionTest extends TestCase // Tests for Extend Own Rental (tenant) and
 
     public function test_a_tenant_daily_extension_is_at_most_the_month_days_minus_one(): void // Scenario: tenant daily limit
     { // Start of the test
-        $this->actingAs($this->tenant)->post("/tenant/rentals/{$this->rental->rental_id}/extend/preview", ['rental_type' => 'daily', 'days' => 29])->assertOk()->assertSee('Rp 29.000'); // 29 allowed
+        $this->actingAs($this->tenant)->followingRedirects()->post("/tenant/rentals/{$this->rental->rental_id}/extend/preview", ['rental_type' => 'daily', 'days' => 29])->assertOk()->assertSee('Rp 1.000 per day')->assertSee('Rp 29.000'); // 29 allowed, with the daily price
         $this->actingAs($this->tenant)->post("/tenant/rentals/{$this->rental->rental_id}/extend/preview", ['rental_type' => 'daily', 'days' => 30])->assertSessionHasErrors('days'); // 30 must go to the admin
     } // End of the test
 
@@ -157,7 +157,7 @@ class ExtensionTest extends TestCase // Tests for Extend Own Rental (tenant) and
 
     public function test_admin_extension_of_31_days_from_30_november_is_one_month_and_one_day(): void // Scenario: 30 Nov + 31 days
     { // Start of the test
-        $this->actingAs($this->admin)->post("/admin/extensions/{$this->rental->rental_id}/preview", ['days' => 31]) // Preview
+        $this->actingAs($this->admin)->followingRedirects()->post("/admin/extensions/{$this->rental->rental_id}/preview", ['days' => 31]) // Preview
             ->assertOk()->assertSee('31 Dec 2026')->assertSee('Rp 26.000'); // 25,000 + 1,000
         $this->actingAs($this->admin)->post("/admin/extensions/{$this->rental->rental_id}", ['days' => 31, 'payment_proof' => $this->proof()]) // Save
             ->assertRedirect('/admin/extensions'); // Back to the list
@@ -174,7 +174,7 @@ class ExtensionTest extends TestCase // Tests for Extend Own Rental (tenant) and
     { // Start of the test
         $this->actingAs($this->admin)->get("/admin/extensions/{$this->rental->rental_id}/create") // The form
             ->assertSee('name="new_end_date"', false)->assertSee('min="2026-12-01"', false); // Days up to 30 Nov are greyed out
-        $this->actingAs($this->admin)->post("/admin/extensions/{$this->rental->rental_id}/preview", ['new_end_date' => '2026-12-31']) // 30 Nov -> 31 Dec
+        $this->actingAs($this->admin)->followingRedirects()->post("/admin/extensions/{$this->rental->rental_id}/preview", ['new_end_date' => '2026-12-31']) // 30 Nov -> 31 Dec
             ->assertOk()->assertSee('31 days')->assertSee('Rp 26.000'); // 1 month + 1 day, same as typing 31 days
         $this->actingAs($this->admin)->post("/admin/extensions/{$this->rental->rental_id}/preview", ['new_end_date' => '2026-11-30'])->assertSessionHasErrors('new_end_date'); // Same date: refused
         $this->actingAs($this->admin)->post("/admin/extensions/{$this->rental->rental_id}/preview", [])->assertSessionHasErrors(['new_end_date', 'days']); // Nothing filled in: refused
@@ -182,9 +182,9 @@ class ExtensionTest extends TestCase // Tests for Extend Own Rental (tenant) and
 
     public function test_admin_extensions_split_into_real_month_lengths(): void // Scenario: 92 and 63 days from 30 Nov
     { // Start of the test
-        $this->actingAs($this->admin)->post("/admin/extensions/{$this->rental->rental_id}/preview", ['days' => 92]) // Nov 30 + Dec 31 + Jan 31
+        $this->actingAs($this->admin)->followingRedirects()->post("/admin/extensions/{$this->rental->rental_id}/preview", ['days' => 92]) // Nov 30 + Dec 31 + Jan 31
             ->assertSee('3 x 25 x Rp 1.000 = Rp 75.000')->assertSee('Rp 75.000'); // 3 months, no extra days
-        $this->actingAs($this->admin)->post("/admin/extensions/{$this->rental->rental_id}/preview", ['days' => 63]) // Nov 30 + Dec 31 + 2 days
+        $this->actingAs($this->admin)->followingRedirects()->post("/admin/extensions/{$this->rental->rental_id}/preview", ['days' => 63]) // Nov 30 + Dec 31 + 2 days
             ->assertSee('2 x 25 x Rp 1.000 = Rp 50.000')->assertSee('2 x Rp 1.000 = Rp 2.000')->assertSee('Rp 52.000'); // 2 months + 2 days
     } // End of the test
 
@@ -200,4 +200,49 @@ class ExtensionTest extends TestCase // Tests for Extend Own Rental (tenant) and
     { // Start of the test
         $this->actingAs($this->tenant)->get('/admin/extensions')->assertForbidden(); // Admin only
     } // End of the test
+    public function test_the_tenant_is_told_what_happened_to_an_extension(): void // Scenario: rejected and admin extensions are shown to the tenant
+    { // Start of the test
+        $this->actingAs($this->tenant)->post("/tenant/rentals/{$this->rental->rental_id}/extend", ['rental_type' => 'daily', 'days' => 5, 'payment_proof' => $this->proof()]); // Request
+        $this->actingAs($this->admin)->post('/admin/extension-requests/' . Extension::first()->extension_id . '/reject'); // Rejected
+
+        $this->actingAs($this->tenant)->get('/tenant/rentals')->assertSee('Extension to 05 Dec 2026 was rejected'); // On My Rentals
+        $this->actingAs($this->tenant)->get('/tenant')->assertSee('Extension updates')->assertSee('Extension to 05 Dec 2026 was rejected'); // On the dashboard
+
+        $this->actingAs($this->admin)->post("/admin/extensions/{$this->rental->rental_id}", ['days' => 3, 'payment_proof' => $this->proof()]); // Admin extends in person
+        $this->actingAs($this->tenant)->get('/tenant/rentals')->assertSee('Extended by the admin to 03 Dec 2026'); // The tenant is told
+        $this->actingAs($this->tenant)->get('/tenant')->assertSee('Extended by the admin to 03 Dec 2026'); // Also on the dashboard
+    } // End of the test
+
+    public function test_an_extension_cannot_run_into_another_booking(): void // Scenario: future booking of the same garage
+    { // Start of the test
+        $other = $this->acceptedTenant('sari@mail.test', '3578010101010002'); // Another tenant
+        $vehicle = Vehicle::create(['user_id' => $other->user_id, 'type' => 'car', 'plate_number' => 'L 5 CD', 'brand_model' => 'Jazz']); // Their car
+        Rental::create(['vehicle_id' => $vehicle->vehicle_id, 'garage_id' => 'C001', 'rental_type' => 'daily', 'days' => 5, 'start_date' => '2026-12-10', 'end_date' => '2026-12-15', 'rental_cost' => 5000, 'charging_cost' => 0, 'total_cost' => 5000, 'payment_proof' => 'y.jpg']); // C001 booked from 10 Dec
+
+        $this->actingAs($this->admin)->post("/admin/extensions/{$this->rental->rental_id}/preview", ['days' => 10]) // 30 Nov -> 10 Dec
+            ->assertSessionHasErrors(['days' => 'Garage C001 is booked by another tenant from 10 Dec 2026, so it can be extended until 09 Dec 2026 at the latest.']); // Refused
+        $this->actingAs($this->admin)->post("/admin/extensions/{$this->rental->rental_id}/preview", ['days' => 9])->assertSessionHasNoErrors(); // Until 9 Dec is fine
+        $this->actingAs($this->tenant)->post("/tenant/rentals/{$this->rental->rental_id}/extend/preview", ['rental_type' => 'monthly'])->assertSessionHasErrors('rental_type'); // A month is too long for the tenant too
+    } // End of the test
+
+    public function test_the_admin_form_keeps_values_and_shows_a_missing_proof(): void // Scenario: change details and Confirm and pay without an image
+    { // Start of the test
+        $this->actingAs($this->admin)->post("/admin/extensions/{$this->rental->rental_id}/preview", ['new_end_date' => '2026-12-31']); // Checked
+        $this->actingAs($this->admin)->get("/admin/extensions/{$this->rental->rental_id}/create?edit=1")->assertSee('value="2026-12-31"', false); // "Change details" keeps the date
+
+        $this->actingAs($this->admin)->get("/admin/extensions/{$this->rental->rental_id}/preview"); // Confirm page opened
+        $this->actingAs($this->admin)->followingRedirects()->post("/admin/extensions/{$this->rental->rental_id}", ['days' => 31]) // Confirm without a proof
+            ->assertSee('Confirm Extension')->assertSee('Upload the payment proof image before you confirm.'); // Back on the confirm page, in red
+    } // End of the test
+
+    public function test_the_accept_pop_up_opens_again_with_the_error(): void // Scenario: tidy Accept pop-up, missing evidence
+    { // Start of the test
+        $this->actingAs($this->tenant)->post("/tenant/rentals/{$this->rental->rental_id}/extend", ['rental_type' => 'daily', 'days' => 5, 'payment_proof' => $this->proof()]); // Request
+        $id = Extension::first()->extension_id; // Its ID
+
+        $this->actingAs($this->admin)->get('/admin/extension-requests')->assertSee('id="accept-' . $id . '"', false)->assertSee('View proof'); // One pop-up per request and a proof viewer
+        $this->actingAs($this->admin)->from('/admin/extension-requests')->followingRedirects()->post("/admin/extension-requests/{$id}/accept", ['extension_id' => $id]) // Accept without evidence
+            ->assertSee('data-open-on-load', false)->assertSee('Upload the payment proof image before you confirm.'); // The pop-up opens again with the field in red
+    } // End of the test
+
 } // End of the class

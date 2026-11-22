@@ -77,4 +77,12 @@ class VerificationTest extends TestCase // Tests for Verify New Registrant
     { // Start of the test
         $this->actingAs($this->admin)->patch("/admin/verifications/{$this->admin->user_id}", ['decision' => 'accept'])->assertNotFound(); // 404
     } // End of the test
+
+    public function test_the_ktp_opens_in_a_viewer_next_to_the_typed_nik(): void // Scenario: turnable KTP viewer
+    { // Start of the test
+        $this->actingAs($this->admin)->get('/admin/verifications') // The page
+            ->assertSee('data-viewer-src', false)->assertSee('NIK typed: 3578010101010001') // The photo opens in the viewer with the typed NIK under it
+            ->assertSee('Turn left')->assertSee('Turn right'); // The viewer can turn the photo
+    } // End of the test
+
 } // End of the class

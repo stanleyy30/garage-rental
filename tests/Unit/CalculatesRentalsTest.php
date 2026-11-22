@@ -135,4 +135,14 @@ class CalculatesRentalsTest extends TestCase // Unit tests for every formula in 
         $this->assertFalse($this->rules->isValidNik('357801010101000')); // 15 digits
         $this->assertFalse($this->rules->isValidNik('35780101010100AB')); // Letters
     } // End of the test
+
+    public function test_plates_are_written_the_standard_way(): void // normalizePlate
+    { // Start of the test
+        $this->assertSame('L 1234 AB', $this->rules->normalizePlate('l1234ab')); // Without spaces
+        $this->assertSame('B 1 A', $this->rules->normalizePlate(' b  1   a ')); // Extra spaces
+        $this->assertSame('AD 99', $this->rules->normalizePlate('AD99')); // No letters at the end
+        $this->assertNull($this->rules->normalizePlate('ABC')); // No number
+        $this->assertNull($this->rules->normalizePlate('L 12345 AB')); // Five digits
+    } // End of the test
+
 } // End of the class

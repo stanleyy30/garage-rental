@@ -58,4 +58,12 @@ class GarageTest extends TestCase // Tests for Create Garages
         $this->actingAs($this->admin)->post('/admin/garages', ['type' => 'car', 'quantity' => 1, 'daily_price' => 50000]); // C001
         $this->actingAs($this->admin)->get('/admin/garages')->assertOk()->assertSee('C001')->assertSee('Rp 1.250.000'); // Monthly price shown
     } // End of the test
+
+    public function test_the_kwh_price_shows_only_for_electric_car_garages(): void // Scenario: kWh field hidden for other types
+    { // Start of the test
+        $this->actingAs($this->admin)->get('/admin/garages')->assertSee('class="col-md-4 d-none" id="kwh-box"', false); // Hidden at first
+        $this->actingAs($this->admin)->post('/admin/garages', ['type' => 'bicycle', 'quantity' => 1, 'daily_price' => 2000, 'electricity_price_per_kwh' => 1234567890]); // A kWh price sent for a bicycle garage
+        $this->assertNull(Garage::find('S001')->electricity_price_per_kwh); // Ignored
+    } // End of the test
+
 } // End of the class

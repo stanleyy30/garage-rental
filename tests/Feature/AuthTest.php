@@ -102,4 +102,48 @@ class AuthTest extends TestCase // Tests for registration, login, logout and rol
         $this->actingAs($tenant)->post('/logout')->assertRedirect('/login'); // Logout goes to the login page
         $this->assertGuest(); // Nobody is logged in any more
     } // End of the test
+
+    public function test_the_register_form_shows_grey_examples(): void // Scenario: placeholders and the plain Email label
+    { // Start of the test
+        $this->get('/register')->assertOk() // The registration page
+            ->assertSee('placeholder="3578010101900001"', false)->assertSee('placeholder="Budi Santoso"', false)->assertSee('placeholder="081234567890"', false) // Grey examples
+            ->assertSee('placeholder="budi@example.com"', false)->assertSee('novalidate', false) // Email example; the server shows the errors
+            ->assertDontSee('used to log in'); // Just "Email"
+    } // End of the test
+
+    public function test_every_wrong_field_is_reported_at_once(): void // Scenario: all wrong fields in red together
+    { // Start of the test
+        $this->post('/register', ['nik' => 'qwertyuiopqwerty', 'name' => '1234567890', 'phone_number' => 'qwertyuiopqwert', 'email' => 'qwertyuiop', 'password' => 'abc', 'password_confirmation' => 'xyz']) // Everything wrong
+            ->assertSessionHasErrors(['nik', 'ktp_photo', 'name', 'phone_number', 'email', 'password']); // One error per field
+        $this->post('/register', $this->validRegistration(['phone_number' => '1234567890']))->assertSessionHasErrors('phone_number'); // Doesn't start with 08
+        $this->assertDatabaseCount('users', 0); // Nothing was saved
+    } // End of the test
+
+    public function test_a_rejected_tenant_can_send_the_registration_again(): void // Scenario: file again after a rejection
+    { // Start of the test
+        $this->post('/register', $this->validRegistration()); // Register
+        $tenant = Tenant::first(); // The new tenant
+        $oldPhoto = $tenant->ktp_photo; // First KTP photo
+        $tenant->update(['verification_status' => 'rejected', 'verified_at' => now()]); // The admin rejected it
+
+        $this->actingAs($tenant)->get('/tenant')->assertSee('Correct and send again'); // The dashboard offers it
+        $this->actingAs($tenant)->get('/tenant/registration')->assertOk()->assertSee('value="3578010101010001"', false); // The form keeps the old NIK
+        $this->actingAs($tenant)->put('/tenant/registration', ['nik' => '3578010101010009', 'name' => 'Budi Santoso', 'phone_number' => '081234567890', 'ktp_photo' => UploadedFile::fake()->image('ktp2.jpg')]) // Corrected
+            ->assertRedirect('/tenant'); // Back home
+
+        $tenant->refresh(); // Read it again
+        $this->assertSame('pending', $tenant->verification_status->value); // Waiting for the admin again
+        $this->assertSame('3578010101010009', $tenant->nik); // New NIK saved
+        Storage::disk('local')->assertMissing($oldPhoto); // Old photo removed
+        Storage::disk('local')->assertExists($tenant->ktp_photo); // New photo saved
+    } // End of the test
+
+    public function test_only_a_rejected_tenant_can_send_again(): void // Scenario: pending or accepted tenants can't
+    { // Start of the test
+        $tenant = Tenant::create($this->validRegistration()); // A pending tenant
+        $this->actingAs($tenant)->get('/tenant/registration')->assertRedirect('/tenant'); // Sent home
+        $this->actingAs($tenant)->put('/tenant/registration', ['nik' => '3578010101010009', 'name' => 'Budi', 'phone_number' => '081234567890', 'ktp_photo' => UploadedFile::fake()->image('k.jpg')])->assertRedirect('/tenant'); // Nothing changes
+        $this->assertSame('3578010101010001', $tenant->fresh()->nik); // Same NIK
+    } // End of the test
+
 } // End of the class
