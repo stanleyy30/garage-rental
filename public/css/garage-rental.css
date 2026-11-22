@@ -1,0 +1,18 @@
+/* Styles for the booking calendar and the image viewer */
+.rc-nav { display: flex; justify-content: space-between; margin-bottom: .5rem; } /* Arrow buttons at both ends */
+.rc-months { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 1.5rem; } /* Two months side by side, stacked on phones */
+.rc-title { text-align: center; font-weight: 600; margin-bottom: .4rem; } /* Month name */
+.rc-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; text-align: center; } /* Seven columns, one per weekday */
+.rc-head { font-size: .75rem; color: #6c757d; padding: .2rem 0; } /* Weekday titles in grey */
+.rc-day { display: block; width: 100%; border: 0; background: transparent; padding: .35rem 0; border-radius: .35rem; font-size: .9rem; line-height: 1.2; } /* One day */
+button.rc-day:hover { background: #e7f1ff; } /* Light blue when the mouse is over a clickable day */
+.rc-off { color: #c4c8cc; } /* Days before the first allowed day are greyed out */
+.rc-between { background: #cfe2ff; border-radius: 0; } /* Days between start and end */
+.rc-start, .rc-end { background: #0d6efd; color: #fff; font-weight: 600; } /* Start and end days in dark blue */
+button.rc-start:hover, button.rc-end:hover { background: #0b5ed7; } /* Slightly darker when hovered */
+.rc-legend { margin-top: .6rem; font-size: .8rem; color: #6c757d; } /* Colour key under the calendar */
+.rc-key { display: inline-block; width: .8rem; height: .8rem; border-radius: .2rem; vertical-align: -1px; margin-left: .6rem; } /* Coloured square in the key */
+.rc-legend .rc-key:first-child { margin-left: 0; } /* No gap before the first square */
+.viewer-frame { height: 70vh; display: flex; align-items: center; justify-content: center; overflow: hidden; background: #212529; border-radius: .5rem; } /* Dark box that holds the image */
+.viewer-frame img { transition: transform .2s ease; } /* Smooth turning */
+.thumb-button { border: 0; padding: 0; background: none; cursor: zoom-in; } /* Thumbnail that opens the viewer */
