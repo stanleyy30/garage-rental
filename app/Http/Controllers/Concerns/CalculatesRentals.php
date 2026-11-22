@@ -137,10 +137,10 @@ trait CalculatesRentals // Every business rule and formula, shared by all contro
         return trim($parts[1] . ' ' . $parts[2] . ' ' . $parts[3]); // Area code, number and letters with one space between
     } // End of normalizePlate()
 
-    public function rentalsOverlapping(Carbon $start, Carbon $end): Builder // Rentals that share at least one day with start..end
+    public function rentalsOverlapping(Carbon $start, Carbon $end): Builder // Rentals that use the garage on any night from start to end (the end date is the day the vehicle leaves)
     { // Start of rentalsOverlapping()
-        return Rental::whereDate('start_date', '<=', $end) // Starts on or before the last day ...
-            ->whereDate('end_date', '>=', $start); // ... and ends on or after the first day
+        return Rental::whereDate('start_date', '<', $end) // Starts before the new booking ends ...
+            ->whereDate('end_date', '>', $start); // ... and ends after it starts; a booking may end on the day another starts
     } // End of rentalsOverlapping()
 
     public function needsPlate(VehicleType $type): bool // Every vehicle needs a plate number except a bicycle
@@ -174,7 +174,7 @@ trait CalculatesRentals // Every business rule and formula, shared by all contro
     public function refreshGarageStatuses(): void // A garage is used while a rental covers today, otherwise available
     { // Start of refreshGarageStatuses()
         $busyGarageIds = Rental::whereDate('start_date', '<=', today()) // Rentals that started today or earlier ...
-            ->whereDate('end_date', '>=', today()) // ... and end today or later
+            ->whereDate('end_date', '>', today()) // ... and end after today (on the end date the vehicle leaves, so the garage is free again)
             ->pluck('garage_id'); // Only their garage IDs
 
         Garage::whereIn('garage_id', $busyGarageIds)->update(['status' => GarageStatus::Used]); // Those garages are used

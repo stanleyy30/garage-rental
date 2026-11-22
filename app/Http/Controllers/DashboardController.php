@@ -27,7 +27,7 @@ class DashboardController extends Controller // Home pages for the admin and the
                 ['label' => 'Extension requests', 'value' => Extension::where('status', ExtensionStatus::Pending)->count()], // Requests waiting for the admin
                 ['label' => 'Garages', 'value' => Garage::count()], // All garages
                 ['label' => 'Available garages', 'value' => Garage::where('status', GarageStatus::Available)->count()], // Free garages
-                ['label' => 'Rented today', 'value' => Rental::whereDate('start_date', '<=', today())->whereDate('end_date', '>=', today())->count()], // Active rentals
+                ['label' => 'Rented today', 'value' => Rental::whereDate('start_date', '<=', today())->whereDate('end_date', '>', today())->count()], // Active rentals
             ], // End of the cards
         ]); // End of page()
     } // End of admin()

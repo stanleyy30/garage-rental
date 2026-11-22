@@ -49,13 +49,13 @@ trait HandlesExtensions // Steps shared by the tenant's and the admin's extensio
 
     protected function bookingConflict(Rental $rental, Carbon $newEndDate): ?string // Why the garage can't be kept until the new end date, or null if it can
     { // Start of bookingConflict()
-        $next = $this->rentalsOverlapping($rental->end_date->copy()->addDay(), $newEndDate) // Rentals on the extra days ...
+        $next = $this->rentalsOverlapping($rental->end_date, $newEndDate) // Rentals on the extra days ...
             ->where('garage_id', $rental->garage_id) // ... in the same garage ...
             ->where('rental_id', '!=', $rental->rental_id) // ... other than this one
             ->orderBy('start_date') // ... earliest first
             ->first(); // The first one, if any
 
-        return $next === null ? null : "Garage {$rental->garage_id} is booked by another tenant from {$this->date($next->start_date)}, so it can be extended until {$this->date($next->start_date->copy()->subDay())} at the latest."; // The last free day before that booking
+        return $next === null ? null : "Garage {$rental->garage_id} is booked by another tenant from {$this->date($next->start_date)}, so it can be extended until {$this->date($next->start_date)} at the latest."; // The vehicle can stay until that booking starts
     } // End of bookingConflict()
 
     protected function saveExtension(Rental $rental, array $extension, UploadedFile $proof, ExtensionStatus $status): void // Save the extension; an accepted one also moves the rental's end date

@@ -60,7 +60,7 @@
             </div> {{-- End of the calendar column --}}
 
             <div class="col-12"> {{-- Garage column --}}
-                <label for="garage_id" class="form-label">Garage (free on every day of your booking)</label> {{-- Label --}}
+                <label for="garage_id" class="form-label">Garage (garages booked on your dates are greyed out)</label> {{-- Label --}}
                 <select id="garage_id" name="garage_id" class="form-select @error('garage_id') is-invalid @enderror"> {{-- Garages from the controller --}}
                     @foreach ($garageOptions as $id => $text) {{-- One option per garage that fits the vehicle --}}
                         <option value="{{ $id }}" @selected(old('garage_id') === $id)>{{ $text }}</option> {{-- e.g. "C001 - Car Garage - Rp 50.000 per day" --}}
@@ -124,13 +124,22 @@
             return days > 0 ? days : null; // Only a positive number counts
         } // End of bookingLength()
 
-        function showFreeGarages(firstDay, lastDay) { // Keeps only garages with no booking on these days
+        function showFreeGarages(firstDay, lastDay) { // Free garages can be picked; booked ones stay in the list, greyed out with their dates
             const chosen = garageSelect.value || wanted; // Keep the current choice when it is still free
-            const free = allGarages.filter((garage) => !(bookings[garage.id] || []).some((booked) => booked[0] <= lastDay && booked[1] >= firstDay)); // No booking shares a day
             garageSelect.innerHTML = ''; // Empty the dropdown
-            free.forEach((garage) => garageSelect.add(new Option(garage.text, garage.id, false, garage.id === chosen))); // Add the free ones back
-            if (free.length === 0) { // Every garage is busy on these days
-                garageSelect.add(new Option('No garage is free on these days. Try other dates.', '')); // Say so
+            let freeCount = 0; // How many garages can be picked
+            allGarages.forEach((garage) => { // Every garage that fits the vehicle
+                const busy = (bookings[garage.id] || []).find((booked) => booked[0] < lastDay && booked[1] > firstDay); // A booking that uses the garage on these nights (the end date is the day the vehicle leaves)
+                const text = busy ? garage.text + ' (booked ' + G.longDate(G.parseDate(busy[0])) + ' to ' + G.longDate(G.parseDate(busy[1])) + ')' : garage.text; // Booked garages show when they are taken
+                const option = new Option(text, garage.id, false, !busy && garage.id === chosen); // One option
+                option.disabled = Boolean(busy); // Greyed out when booked
+                garageSelect.add(option); // Add it
+                freeCount += busy ? 0 : 1; // Count the free ones
+            }); // End of the garages
+            if (freeCount === 0) { // Every garage is busy on these days
+                garageSelect.add(new Option('No garage is free on these days. Try other dates.', '', true, true)); // Say so
+            } else if (garageSelect.selectedOptions[0]?.disabled) { // The browser kept a greyed-out garage selected
+                garageSelect.value = Array.from(garageSelect.options).find((option) => !option.disabled).value; // Pick the first free one instead
             } // End of the empty case
         } // End of showFreeGarages()
 
@@ -150,7 +159,7 @@
             periodText.textContent = end // Line under the calendar
                 ? G.longDate(start) + ' to ' + G.longDate(end) + ' (' + length + ' days)' // Whole period
                 : 'Starts ' + G.longDate(start) + '. Enter the number of days to see the end date.'; // Days still missing
-            showFreeGarages(G.isoDate(start), G.isoDate(end || start)); // Only garages free on all these days
+            showFreeGarages(G.isoDate(start), G.isoDate(end || G.addDays(start, 1))); // Garages free on every night from the start to the end date
             form.dispatchEvent(new Event('garages-updated')); // Let the charging part check the chosen garage again
         } // End of update()
 
