@@ -8,4 +8,6 @@
 <x-summary-confirm :summary="$summary" :action="route('admin.extensions.store', $rentalId)"> {{-- Shared summary + payment form --}}
     <input type="hidden" name="days" value="{{ $days }}"> {{-- Send the days again; the controller calculates again --}}
 </x-summary-confirm> {{-- End of the summary --}}
+
+<a href="{{ $backUrl }}" class="btn btn-link mt-2">Change details</a> {{-- Back to the form, keeping the values --}}
 @endsection {{-- End of this page's content --}}

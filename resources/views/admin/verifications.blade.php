@@ -4,7 +4,7 @@
 
 @section('content') {{-- Start of this page's content --}}
 <h1 class="h3 mb-3">Verify New Registrants</h1> {{-- Page heading --}}
-<p class="text-muted">Open each tenant's KTP photo and check that its NIK matches the NIK they typed, then accept or reject the registration.</p> {{-- Short instruction --}}
+<p class="text-muted">Open each tenant's KTP photo (you can turn it if it was taken sideways) and check that its NIK matches the NIK they typed, then accept or reject the registration. A rejected tenant can correct the details and send them again.</p> {{-- Short instruction --}}
 
 @error('decision') {{-- An error came back from the controller --}}
     <div class="alert alert-danger">{{ $message }}</div> {{-- Show it in red --}}
@@ -22,7 +22,8 @@
                     <tr> {{-- Start of the row --}}
                         <td> {{-- KTP cell --}}
                             @if ($tenant['ktpUrl']) {{-- A photo was uploaded --}}
-                                <a href="{{ $tenant['ktpUrl'] }}" target="_blank"><img src="{{ $tenant['ktpUrl'] }}" alt="KTP of {{ $tenant['name'] }}" class="img-thumbnail" style="max-height: 70px"></a> {{-- Small preview; click opens it full size --}}
+                                <button type="button" class="thumb-button" data-viewer-src="{{ $tenant['ktpUrl'] }}" data-viewer-title="KTP of {{ $tenant['name'] }}" data-viewer-caption="NIK typed: {{ $tenant['nik'] }}"><img src="{{ $tenant['ktpUrl'] }}" alt="KTP of {{ $tenant['name'] }}" class="img-thumbnail" style="max-height: 70px"></button> {{-- Small preview; click opens the viewer, where the photo can be turned and compared with the typed NIK --}}
+                                <div><button type="button" class="btn btn-link btn-sm p-0" data-viewer-src="{{ $tenant['ktpUrl'] }}" data-viewer-title="KTP of {{ $tenant['name'] }}" data-viewer-caption="NIK typed: {{ $tenant['nik'] }}">Check KTP</button></div> {{-- Same viewer from a text link --}}
                             @else {{-- Older account without a photo --}}
                                 <span class="text-muted">No photo</span> {{-- Nothing to show --}}
                             @endif {{-- End of the KTP cell --}}

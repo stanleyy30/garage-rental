@@ -12,4 +12,9 @@ class StoreTenantExtensionRequest extends TenantExtensionRequest // Tenant's "Co
     { // Start of rules()
         return parent::rules() + $this->paymentProofRule(); // Extension rules plus the image rule
     } // End of rules()
+
+    public function messages(): array // Our own error texts
+    { // Start of messages()
+        return $this->paymentProofMessages(); // Texts for the form plus the payment proof
+    } // End of messages()
 } // End of the class

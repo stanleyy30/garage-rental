@@ -18,4 +18,9 @@ class AcceptExtensionRequest extends FormRequest // The admin's Accept button: n
     { // Start of rules()
         return $this->paymentProofRule(); // The payment evidence image
     } // End of rules()
+
+    public function messages(): array // Our own error texts
+    { // Start of messages()
+        return $this->paymentProofMessages(); // Texts for the form plus the payment proof
+    } // End of messages()
 } // End of the class

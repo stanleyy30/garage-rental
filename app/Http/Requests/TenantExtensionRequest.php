@@ -17,7 +17,7 @@ class TenantExtensionRequest extends FormRequest // The tenant's extension form 
     { // Start of rules()
         return [ // One entry per field
             'rental_type' => ['required', Rule::enum(RentalType::class)], // Daily or monthly
-            'days' => ['nullable', 'required_if:rental_type,daily', 'integer', 'min:1'], // Daily only; the upper limit is checked by the controller
+            'days' => ['nullable', 'exclude_if:rental_type,monthly', 'required_if:rental_type,daily', 'integer', 'min:1'], // Daily only; the upper limit is checked by the controller
         ]; // End of the list
     } // End of rules()
 } // End of the class

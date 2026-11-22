@@ -3,6 +3,7 @@
 namespace App\Http\Controllers; // This file lives in app/Http/Controllers
 
 use App\Enums\ExtensionStatus; // The ExtensionStatus enum
+use App\Http\Controllers\Concerns\HandlesExtensions; // Shared extension steps (the booking check)
 use App\Http\Requests\AcceptExtensionRequest; // Validated Accept form with the payment evidence
 use App\Models\Extension; // The Extension model
 use Illuminate\Http\RedirectResponse; // Return type for "go to another page"
@@ -13,6 +14,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse; // Return type for "send 
 
 class ExtensionRequestController extends Controller // Extension requests from tenants, accepted or rejected by the admin
 { // Start of the class
+    use HandlesExtensions; // Gives this class bookingConflict()
+
     public function index(): View // GET /admin/extension-requests
     { // Start of index()
         $pending = Extension::with(['rental.garage', 'rental.vehicle.tenant']) // Load rental, garage, vehicle and tenant too ...
@@ -51,8 +54,13 @@ class ExtensionRequestController extends Controller // Extension requests from t
         if ($extension->status !== ExtensionStatus::Pending) { // Already decided ...
             return back()->withErrors(['payment_proof' => 'This request has already been decided.']); // ... do nothing
         } // End of the decided check
+
+        $conflict = $this->bookingConflict($rental, $extension->new_end_date); // Another tenant booked the garage on the extra days meanwhile?
+        if ($conflict !== null) { // Taken ...
+            return back()->withInput()->withErrors(['payment_proof' => $conflict . ' Reject this request and ask the tenant for a shorter one.']); // ... can't accept
+        } // End of the booking check
         if (! $rental->end_date->equalTo($extension->old_end_date)) { // The rental's end date changed since the request ...
-            return back()->withErrors(['payment_proof' => 'The rental was changed after this request. Reject it and ask the tenant to request again.']); // ... the price would be wrong
+            return back()->withInput()->withErrors(['payment_proof' => 'The rental was changed after this request. Reject it and ask the tenant to request again.']); // ... the price would be wrong
         } // End of the changed check
 
         $evidencePath = $request->file('payment_proof')->store('payment-proofs', 'public'); // Save the admin's payment evidence

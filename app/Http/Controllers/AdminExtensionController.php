@@ -10,6 +10,7 @@ use App\Models\Rental; // The Rental model
 use Carbon\Carbon; // Date library (to read the picked date)
 use Illuminate\Http\RedirectResponse; // Return type for "go to another page"
 use Illuminate\Http\Request; // The incoming browser request
+use Illuminate\Validation\ValidationException; // Error that sends the user back to the form
 use Illuminate\View\View; // Return type for "show a page"
 
 class AdminExtensionController extends Controller // Extend Garage Rental: the admin enters the days the tenant asked for outside the app
@@ -41,41 +42,86 @@ class AdminExtensionController extends Controller // Extend Garage Rental: the a
         ]); // End of page()
     } // End of index()
 
-    public function create(Rental $rental): View // GET /admin/extensions/{rental}/create
+    public function create(Request $request, Rental $rental): View // GET /admin/extensions/{rental}/create
     { // Start of create()
         $this->ensureActive($rental); // Only running rentals
+
+        if ($request->boolean('edit') && $request->session()->has($this->draftKey($rental))) { // Back from the confirm page with "Change details" ...
+            $request->session()->flashInput($request->session()->get($this->draftKey($rental))); // ... put the values back in the form
+        } // End of the edit case
 
         return $this->page('admin.extensions.create', [ // Show the form with ...
             'rentalId' => $rental->rental_id, // ... the rental
             'garage' => $rental->garage_id . ' (' . $rental->garage->type->label() . ')', // ... its garage
             'tenant' => $rental->vehicle->tenant->name, // ... the tenant
-            'endDate' => $this->date($rental->end_date), // ... the current end date
-            'firstNewEndDate' => $rental->end_date->copy()->addDay()->toDateString(), // ... and the earliest new end date for the calendar
+            'endDate' => $this->date($rental->end_date), // ... the current end date as text
+            'endDateIso' => $rental->end_date->toDateString(), // ... and as YYYY-MM-DD for the calendar
+            'firstNewEndDate' => $rental->end_date->copy()->addDay()->toDateString(), // ... and the earliest new end date
         ]); // End of page()
     } // End of create()
 
-    public function preview(AdminExtensionRequest $request, Rental $rental): View // POST /admin/extensions/{rental}/preview
+    public function preview(AdminExtensionRequest $request, Rental $rental): RedirectResponse // POST /admin/extensions/{rental}/preview: check the new end date
     { // Start of preview()
         $this->ensureActive($rental); // Only running rentals
-        $extension = $this->calculateExtension($rental, $this->extraDays($request, $rental)); // New end date or days, split into months + days
+        $this->checkedExtension($rental, $this->extraDays($request, $rental)); // Calculation and the garage's next booking; any error goes back to the form
+        $request->session()->put($this->draftKey($rental), $request->validated()); // Keep the values for the confirm page
+
+        return redirect()->route('admin.extensions.preview.show', $rental); // Show the cost on its own page
+    } // End of preview()
+
+    public function showPreview(Request $request, Rental $rental): View|RedirectResponse // GET /admin/extensions/{rental}/preview: split, cost and payment form
+    { // Start of showPreview()
+        $this->ensureActive($rental); // Only running rentals
+        $draft = $request->session()->get($this->draftKey($rental)); // Values from the form
+
+        if ($draft === null) { // Nothing to confirm ...
+            return redirect()->route('admin.extensions.create', $rental); // ... start again
+        } // End of the empty check
+
+        $days = ! empty($draft['new_end_date']) ? (int) $rental->end_date->diffInDays(Carbon::parse($draft['new_end_date'])) : (int) $draft['days']; // Extra days from the date, or the days typed in
+
+        try { // Check again: the garage may have been booked in the meantime
+            $extension = $this->checkedExtension($rental, $days); // Calculation and booking check
+        } catch (ValidationException $error) { // A rule fails now ...
+            return redirect()->route('admin.extensions.create', $rental)->withInput($draft)->withErrors($error->errors()); // ... back to the form with the reason
+        } // End of the check
 
         return $this->page('admin.extensions.preview', [ // Show the summary and the payment form
             'rentalId' => $rental->rental_id, // The rental being extended
             'summary' => $this->extensionSummary($rental, $extension), // Label/value rows
             'days' => $extension['days'], // Sent again as a hidden field
+            'backUrl' => route('admin.extensions.create', ['rental' => $rental, 'edit' => 1]), // "Change details" keeps the values
         ]); // End of page()
-    } // End of preview()
+    } // End of showPreview()
 
     public function store(StoreAdminExtensionRequest $request, Rental $rental): RedirectResponse // POST /admin/extensions/{rental}
     { // Start of store()
         $this->ensureActive($rental); // Only running rentals
-        $extension = $this->calculateExtension($rental, $this->extraDays($request, $rental)); // Calculate again
+        $extension = $this->checkedExtension($rental, $this->extraDays($request, $rental)); // Calculate and check again
 
         $this->saveExtension($rental, $extension, $request->file('payment_proof'), ExtensionStatus::Accepted); // Save it; the admin took the payment in person, so it counts at once
+        $request->session()->forget($this->draftKey($rental)); // Saved, so the draft is no longer needed
 
         return redirect()->route('admin.extensions.index') // Back to the list ...
-            ->with('success', "Garage {$rental->garage_id} is extended until {$this->date($extension['newEndDate'])} for {$this->rupiah($extension['cost'])}."); // ... with a green message
+            ->with('success', "Garage {$rental->garage_id} is extended until {$this->date($extension['newEndDate'])} for {$this->rupiah($extension['cost'])}. The tenant sees it on their dashboard."); // ... with a green message
     } // End of store()
+
+    private function draftKey(Rental $rental): string // Session key for this rental's extension draft
+    { // Start of draftKey()
+        return 'admin_extension_draft_' . $rental->rental_id; // One draft per rental
+    } // End of draftKey()
+
+    private function checkedExtension(Rental $rental, int $days): array // Calculates, then makes sure no other booking uses the garage on the extra days
+    { // Start of checkedExtension()
+        $extension = $this->calculateExtension($rental, $days); // Any number of days, split into months + days
+        $conflict = $this->bookingConflict($rental, $extension['newEndDate']); // Another tenant's booking on the extra days?
+
+        if ($conflict !== null) { // The garage is taken on one of those days ...
+            throw ValidationException::withMessages(['new_end_date' => $conflict, 'days' => $conflict]); // ... say until when it is free
+        } // End of the booking check
+
+        return $extension; // New end date, split and cost
+    } // End of checkedExtension()
 
     private function extraDays(AdminExtensionRequest $request, Rental $rental): int // Extra days from the new end date, or the days typed in
     { // Start of extraDays()

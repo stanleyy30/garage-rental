@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Concerns; // This file lives in app/Http/Controll
 use App\Enums\ExtensionStatus; // The ExtensionStatus enum
 use App\Models\Extension; // The Extension model
 use App\Models\Rental; // The Rental model
+use Carbon\Carbon; // Date library used by Laravel
 use Illuminate\Http\UploadedFile; // An uploaded file
 use Illuminate\Support\Facades\DB; // Database helper (for a transaction)
 
@@ -36,6 +37,7 @@ trait HandlesExtensions // Steps shared by the tenant's and the admin's extensio
         return [ // Rows in display order
             ['label' => 'Garage', 'value' => $rental->garage_id . ' (' . $rental->garage->type->label() . ')'], // Garage
             ['label' => 'Vehicle', 'value' => $this->vehicleLabel($rental->vehicle->brand_model, $rental->vehicle->plate_number)], // Vehicle
+            ['label' => 'Daily price', 'value' => $this->rupiah($extension['dailyPrice']) . ' per day'], // Price of one day
             ['label' => 'Current end date', 'value' => $this->date($extension['oldEndDate'])], // Before
             ['label' => 'Extra days', 'value' => $extension['days'] . ' days'], // How many days
             ['label' => 'New end date', 'value' => $this->date($extension['newEndDate'])], // After
@@ -44,6 +46,17 @@ trait HandlesExtensions // Steps shared by the tenant's and the admin's extensio
             ['label' => 'Total to pay', 'value' => $this->rupiah($extension['cost'])], // Total
         ]; // End of the rows
     } // End of extensionSummary()
+
+    protected function bookingConflict(Rental $rental, Carbon $newEndDate): ?string // Why the garage can't be kept until the new end date, or null if it can
+    { // Start of bookingConflict()
+        $next = $this->rentalsOverlapping($rental->end_date->copy()->addDay(), $newEndDate) // Rentals on the extra days ...
+            ->where('garage_id', $rental->garage_id) // ... in the same garage ...
+            ->where('rental_id', '!=', $rental->rental_id) // ... other than this one
+            ->orderBy('start_date') // ... earliest first
+            ->first(); // The first one, if any
+
+        return $next === null ? null : "Garage {$rental->garage_id} is booked by another tenant from {$this->date($next->start_date)}, so it can be extended until {$this->date($next->start_date->copy()->subDay())} at the latest."; // The last free day before that booking
+    } // End of bookingConflict()
 
     protected function saveExtension(Rental $rental, array $extension, UploadedFile $proof, ExtensionStatus $status): void // Save the extension; an accepted one also moves the rental's end date
     { // Start of saveExtension()

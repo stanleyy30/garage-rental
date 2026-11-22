@@ -11,4 +11,6 @@
         <input type="hidden" name="{{ $field }}" value="{{ $value }}"> {{-- Hidden field --}}
     @endforeach {{-- End of the hidden fields --}}
 </x-summary-confirm> {{-- End of the summary --}}
+
+<a href="{{ $backUrl }}" class="btn btn-link mt-2">Change details</a> {{-- Back to the form, keeping the choice --}}
 @endsection {{-- End of this page's content --}}
