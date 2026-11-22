@@ -170,6 +170,16 @@ class ExtensionTest extends TestCase // Tests for Extend Own Rental (tenant) and
         Storage::disk('public')->assertExists($extension->payment_proof); // Proof saved
     } // End of the test
 
+    public function test_the_admin_can_change_the_end_date_on_a_calendar(): void // Scenario: admin picks the new end date
+    { // Start of the test
+        $this->actingAs($this->admin)->get("/admin/extensions/{$this->rental->rental_id}/create") // The form
+            ->assertSee('name="new_end_date"', false)->assertSee('min="2026-12-01"', false); // Days up to 30 Nov are greyed out
+        $this->actingAs($this->admin)->post("/admin/extensions/{$this->rental->rental_id}/preview", ['new_end_date' => '2026-12-31']) // 30 Nov -> 31 Dec
+            ->assertOk()->assertSee('31 days')->assertSee('Rp 26.000'); // 1 month + 1 day, same as typing 31 days
+        $this->actingAs($this->admin)->post("/admin/extensions/{$this->rental->rental_id}/preview", ['new_end_date' => '2026-11-30'])->assertSessionHasErrors('new_end_date'); // Same date: refused
+        $this->actingAs($this->admin)->post("/admin/extensions/{$this->rental->rental_id}/preview", [])->assertSessionHasErrors(['new_end_date', 'days']); // Nothing filled in: refused
+    } // End of the test
+
     public function test_admin_extensions_split_into_real_month_lengths(): void // Scenario: 92 and 63 days from 30 Nov
     { // Start of the test
         $this->actingAs($this->admin)->post("/admin/extensions/{$this->rental->rental_id}/preview", ['days' => 92]) // Nov 30 + Dec 31 + Jan 31
