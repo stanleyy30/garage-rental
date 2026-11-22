@@ -79,9 +79,9 @@ class ReportController extends Controller // Rental reports (admin only)
         return $this->fillRows($buckets, $rentals, $extensions, fn (Rental $r) => $r->garage->type->value, fn (Extension $e) => $e->rental->garage->type->value); // Group by garage type
     } // End of garageTypeRows()
 
-    private function tenantRows(): array // One row per tenant who has rented
+    private function tenantRows(): array // One row per tenant who has rented, with the list of what they rented
     { // Start of tenantRows()
-        $rentals = Rental::with('vehicle.tenant')->get(); // All rentals with their tenant
+        $rentals = Rental::with(['vehicle.tenant', 'garage'])->orderBy('start_date')->get(); // All rentals with their tenant and garage, oldest first
         $extensions = $this->acceptedExtensions()->with('rental.vehicle.tenant')->get(); // Accepted extensions with their tenant
 
         $buckets = $rentals // Rows to fill: one per tenant ...
@@ -89,7 +89,17 @@ class ReportController extends Controller // Rental reports (admin only)
             ->sort() // ... in name order
             ->all(); // ... as a plain array
 
-        return $this->fillRows($buckets, $rentals, $extensions, fn (Rental $r) => $r->vehicle->user_id, fn (Extension $e) => $e->rental->vehicle->user_id); // Group by tenant
+        $rows = $this->fillRows($buckets, $rentals, $extensions, fn (Rental $r) => $r->vehicle->user_id, fn (Extension $e) => $e->rental->vehicle->user_id); // Group by tenant
+
+        foreach (array_keys($buckets) as $index => $userId) { // Rows are in the same order as the buckets
+            $rows[$index]['details'] = $rentals // This tenant's rentals ...
+                ->filter(fn (Rental $r) => $r->vehicle->user_id === $userId) // ... only theirs
+                ->map(fn (Rental $r) => $r->garage_id . ' (' . $r->garage->type->label() . '), ' . $this->vehicleLabel($r->vehicle->brand_model, $r->vehicle->plate_number) . ', ' . $this->date($r->start_date) . ' - ' . $this->date($r->end_date)) // ... e.g. "C001 (Car Garage), Toyota Avanza (L 1234 AB), 08 Sep 2026 - 13 Sep 2026"
+                ->values() // ... numbered again from 0
+                ->all(); // ... as a plain array
+        } // End of the details
+
+        return $rows; // Rows with their details
     } // End of tenantRows()
 
     private function acceptedExtensions(): Builder // Only accepted extensions count as income

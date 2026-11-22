@@ -36,7 +36,16 @@
             <tbody> {{-- Table body --}}
                 @forelse ($rows as $row) {{-- One row per month, day, type or tenant from the controller --}}
                     <tr> {{-- Start of the row --}}
-                        <td>{{ $row['label'] }}</td> {{-- Month, day, type or tenant --}}
+                        <td> {{-- Month, day, type or tenant --}}
+                            {{ $row['label'] }} {{-- The row name --}}
+                            @if (! empty($row['details'])) {{-- The per-tenant report also lists what the tenant rented --}}
+                                <ul class="small text-muted mb-0 ps-3"> {{-- Small grey list under the name --}}
+                                    @foreach ($row['details'] as $detail) {{-- One line per rental --}}
+                                        <li>{{ $detail }}</li> {{-- Garage, vehicle and dates --}}
+                                    @endforeach {{-- End of the rentals --}}
+                                </ul> {{-- End of the list --}}
+                            @endif {{-- End of the details --}}
+                        </td> {{-- End of the name cell --}}
                         <td class="text-end">{{ $row['rentals'] }}</td> {{-- Number of rentals --}}
                         <td class="text-end">{{ $row['extensions'] }}</td> {{-- Number of extensions --}}
                         <td class="text-end">{{ $row['income'] }}</td> {{-- Money received --}}
