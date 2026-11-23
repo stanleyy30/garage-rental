@@ -15,8 +15,8 @@ return new class extends Migration // This file returns one migration object
             $table->foreign('garage_id')->references('garage_id')->on('garages'); // Make garage_id a FK to garages.garage_id
             $table->string('rental_type', 10); // 'daily' or 'monthly'
             $table->integer('days'); // Number of rented days
-            $table->date('start_date'); // Start date (always the day it was rented)
-            $table->date('end_date'); // End date (start_date + days, changes when extended)
+            $table->date('start_date'); // Start date (today or a later day picked on the calendar)
+            $table->date('end_date'); // End date = start_date + days, the day the vehicle leaves (moves when an extension is accepted)
             $table->decimal('rental_cost', 12, 2); // Cost of the garage itself
             $table->integer('battery_level_percent')->nullable(); // Remaining battery (%) when an electric car enters, empty if no charging
             $table->decimal('kwh_to_full', 6, 2)->nullable(); // kWh needed until the battery is full, empty if no charging

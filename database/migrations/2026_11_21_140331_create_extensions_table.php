@@ -14,7 +14,7 @@ return new class extends Migration // This file returns one migration object
             $table->date('old_end_date'); // End date before the extension
             $table->date('new_end_date'); // End date after the extension
             $table->integer('extra_days'); // new_end_date - old_end_date
-            $table->decimal('extra_cost', 12, 2); // extra_days x daily price, never negative
+            $table->decimal('extra_cost', 12, 2); // Whole months x 25 x daily price + leftover days x daily price, never negative
             $table->string('payment_proof'); // File path of the payment-proof image
             $table->timestamps(); // Adds created_at and updated_at
         }); // End of the extensions table
